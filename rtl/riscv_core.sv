@@ -38,7 +38,7 @@ import riscv_defines::*;
 module riscv_core
 #(
   parameter N_EXT_PERF_COUNTERS =  0,
-  parameter INSTR_RDATA_WIDTH   = 32,
+  parameter INSTR_RDATA_WIDTH   = 40, // BACCTODO 
   parameter PULP_SECURE         =  0,
   parameter N_PMP_ENTRIES       = 16,
   parameter USE_PMP             =  1, //if PULP_SECURE is 1, you can still not use the PMP
@@ -133,7 +133,7 @@ module riscv_core
   logic              is_hwlp_id;
   logic [N_HWLP-1:0] hwlp_dec_cnt_id;
   logic              instr_valid_id;
-  logic [31:0]       instr_rdata_id;    // Instruction sampled inside IF stage
+  logic [31:0]       instr_rdata_id;    // Instruction sampled inside IF stage // BACCTODO
   logic              is_compressed_id;
   logic              is_fetch_failed_id;
   logic              illegal_c_insn_id; // Illegal compressed instruction sent to ID stage
@@ -340,7 +340,7 @@ module riscv_core
   logic                             data_err_ack;
   logic                             instr_req_pmp;
   logic                             instr_gnt_pmp;
-  logic [31:0]                      instr_addr_pmp;
+  logic [31:0]                      instr_addr_pmp; // BACCTODO??
   logic                             instr_err_pmp;
 
 
