@@ -31,7 +31,7 @@ import riscv_defines::*;
 module riscv_if_stage
 #(
   parameter N_HWLP          = 2,
-  parameter RDATA_WIDTH     = 32,
+  parameter RDATA_WIDTH     = 32, //BACCTODO is set in riscv_core
   parameter FPU             = 0,
   parameter DM_HaltAddress  = 32'h1A110800
 )
@@ -111,7 +111,7 @@ module riscv_if_stage
 
   logic              fetch_valid;
   logic              fetch_ready;
-  logic       [31:0] fetch_rdata;
+  logic       [31:0] fetch_rdata; // BACCTODO??
   logic       [31:0] fetch_addr;
   logic              is_hwlp_id_q, fetch_is_hwlp;
 
@@ -164,10 +164,11 @@ module riscv_if_stage
   end
 
   generate
-    if (RDATA_WIDTH == 32) begin : prefetch_32
+    if (RDATA_WIDTH == 32 || RDATA_WIDTH == 40) begin : prefetch_32 //BACCTODO
       // prefetch buffer, caches a fixed number of instructions
-      riscv_prefetch_buffer prefetch_buffer_i
-      (
+      riscv_prefetch_buffer #(
+        .RDATA_WIDTH       ( RDATA_WIDTH                 )
+      ) prefetch_buffer_i (
         .clk               ( clk                         ),
         .rst_n             ( rst_n                       ),
 

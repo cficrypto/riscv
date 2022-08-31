@@ -24,8 +24,10 @@
 // clear_i clears the FIFO for the following cycle. in_addr_i can be sent in
 // this cycle already
 
-module riscv_prefetch_buffer
-(
+module riscv_prefetch_buffer 
+#(
+  parameter RDATA_WIDTH = 32 //BACCTODO is set in riscv_if_stage
+)(
   input  logic        clk,
   input  logic        rst_n,
 
@@ -40,7 +42,7 @@ module riscv_prefetch_buffer
 
   input  logic        ready_i,
   output logic        valid_o,
-  output logic [31:0] rdata_o,
+  output logic [RDATA_WIDTH-1:0] rdata_o, //BACCTODO
   output logic [31:0] addr_o,
   output logic        is_hwlp_o, // is set when the currently served data is from a hwloop
 
@@ -48,7 +50,7 @@ module riscv_prefetch_buffer
   output logic        instr_req_o,
   input  logic        instr_gnt_i,
   output logic [31:0] instr_addr_o,
-  input  logic [31:0] instr_rdata_i,
+  input  logic [RDATA_WIDTH-1:0] instr_rdata_i, //BACCTODO
   input  logic        instr_rvalid_i,
   input  logic        instr_err_pmp_i,
   output logic        fetch_failed_o,

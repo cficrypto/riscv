@@ -22,7 +22,9 @@
 // input port: send address one cycle before the data
 // clear_i clears the FIFO for the following cycle. in_addr_i can be sent in
 // this cycle already
-module riscv_fetch_fifo
+module riscv_fetch_fifo #(
+    parameter RDATA_WIDTH = 32
+)
 (
     input  logic        clk,
     input  logic        rst_n,
@@ -32,7 +34,7 @@ module riscv_fetch_fifo
 
     // input port
     input  logic [31:0] in_addr_i,
-    input  logic [31:0] in_rdata_i,
+    input  logic [RDATA_WIDTH-1:0] in_rdata_i, //BACCTODO
     input  logic        in_valid_i,
     output logic        in_ready_o,
 
@@ -42,7 +44,7 @@ module riscv_fetch_fifo
     // output port
     output logic        out_valid_o,
     input  logic        out_ready_i,
-    output logic [31:0] out_rdata_o,
+    output logic [RDATA_WIDTH-1:0] out_rdata_o, //BACCTODO
     output logic [31:0] out_addr_o,
     output logic        unaligned_is_compressed_o,
     output logic        out_valid_stored_o, // same as out_valid_o, except that if something is incoming now it is not included. This signal is available immediately as it comes directly out of FFs
@@ -53,12 +55,12 @@ module riscv_fetch_fifo
 
   // index 0 is used for output
   logic [0:DEPTH-1] [31:0]  addr_n,    addr_int,    addr_Q;
-  logic [0:DEPTH-1] [31:0]  rdata_n,   rdata_int,   rdata_Q;
+  logic [0:DEPTH-1] [RDATA_WIDTH-1:0]  rdata_n,   rdata_int,   rdata_Q; //BACCTODO is this right?
   logic [0:DEPTH-1]         valid_n,   valid_int,   valid_Q;
   logic [0:1      ]         is_hwlp_n, is_hwlp_int, is_hwlp_Q;
 
   logic             [31:0]  addr_next;
-  logic             [31:0]  rdata, rdata_unaligned;
+  logic             [RDATA_WIDTH-1:0]  rdata, rdata_unaligned; //BACCTODO
   logic                     valid, valid_unaligned;
 
   logic                     aligned_is_compressed, unaligned_is_compressed;
@@ -69,10 +71,10 @@ module riscv_fetch_fifo
   //////////////////////////////////////////////////////////////////////////////
 
 
-  assign rdata = (valid_Q[0]) ? rdata_Q[0] : ( in_rdata_i & {32{in_valid_i}} );
+  assign rdata = (valid_Q[0]) ? rdata_Q[0] : ( in_rdata_i & {RDATA_WIDTH{in_valid_i}} );//BACCTODO 
   assign valid = valid_Q[0] || in_valid_i || is_hwlp_Q[1];
 
-  assign rdata_unaligned = (valid_Q[1]) ? {rdata_Q[1][15:0], rdata[31:16]} : {in_rdata_i[15:0], rdata[31:16]};
+  assign rdata_unaligned = (valid_Q[1]) ? {rdata_Q[1][15:0], rdata[31:16]} : {in_rdata_i[15:0], rdata[31:16]}; // BACCTODO do we ignore unaligned accesses
   // it is implied that rdata_valid_Q[0] is set
   assign valid_unaligned = (valid_Q[1] || (valid_Q[0] && in_valid_i));
 
@@ -171,6 +173,7 @@ module riscv_fetch_fifo
           valid_int[2:DEPTH-1] = '0;
 
           // hardware loop incoming?
+          //BACCTODO we can't extract info about hwloops before decryption
           is_hwlp_int[1] = in_is_hwlp_i;
         end else begin
           is_hwlp_int[0] = in_is_hwlp_i;
