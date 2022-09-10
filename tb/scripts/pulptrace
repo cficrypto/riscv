@@ -103,7 +103,7 @@ with subprocess.Popen([objdump_bin, "--prefix-addresses"]
         line = line.decode("ascii")
         if line == '':
             break
-        match = re.match(r'^\s*([0-9a-f]+)\s+(<[0-9a-zA-Z+_]*>)\s+(.*)', line)
+        match = re.match(r'^\s*([0-9a-f]+)\s+(<[0-9a-zA-Z+_.]*>)\s+(.*)', line)
         if match:
             # group(1) = instruction address
             # group(2) = instruction address symbolic
