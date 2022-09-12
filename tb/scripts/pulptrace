@@ -37,8 +37,8 @@ parser = argparse.ArgumentParser(prog='pulptrace',
 
 parser.version = '0.1'
 parser.add_argument('trace_file', type=str, help='trace log from a pulp core')
-parser.add_argument('elf_file', type=str,
-                    help='elf file that was ran, producing the trace log')
+parser.add_argument('-e', '--elf_file', action='append', required=True,
+                    help='elf file that was ran, producing the trace log (might be used multiple times)')
 parser.add_argument('-o,', '--output', type=str, help="""write to file instead of
 stdout""")
 parser.add_argument('-t', '--truncate', action='store_true',
@@ -56,7 +56,6 @@ parser.add_argument('--time', action='store_true',
 args = parser.parse_args()
 
 trace_filename = args.trace_file
-elf_filename = args.elf_file
 
 
 regs_map = [("x0", "zero"), ("x1", "ra"), ("x2", "sp"),
@@ -94,25 +93,25 @@ if os.getenv('RISCV'):
 else:
     objdump_bin = 'riscv32-unknown-elf-objdump'
 
-with subprocess.Popen([objdump_bin, "--prefix-addresses"]
-                      + (['-Mnumeric'] if args.numeric else [])
-                      + (['-Mno-aliases'] if args.no_aliases else [])
-                      + ["-d", elf_filename],
-                      stdout=subprocess.PIPE) as proc:
-    for line in proc.stdout:
-        line = line.decode("ascii")
-        if line == '':
-            break
-        match = re.match(r'^\s*([0-9a-f]+)\s+(<[0-9a-zA-Z+_.]*>)\s+(.*)', line)
-        if match:
-            # group(1) = instruction address
-            # group(2) = instruction address symbolic
-            # group(3) = instruction name
-            addr = int(match.group(1), 16)
-            if addr in objdump_insns:
-                print("Duplicate address (0x%08x) found in %s" % (addr, elf_filename), file=sys.stderr)
-            objdump_insns[addr] = (
-                match.group(2), match.group(3).replace("\t", " "))
+for elf_filename in args.elf_file:
+    with subprocess.Popen([objdump_bin, "--prefix-addresses"]
+                          + (['-Mnumeric'] if args.numeric else [])
+                          + (['-Mno-aliases'] if args.no_aliases else [])
+                          + ["-d", elf_filename],
+                          stdout=subprocess.PIPE) as proc:
+        for line in proc.stdout:
+            line = line.decode("ascii")
+            if line == '':
+                break
+            match = re.match(r'^\s*([0-9a-f]+)\s+(<[0-9a-zA-Z+_.]*>)\s+(.*)', line)
+            if match:
+                # group(1) = instruction address
+                # group(2) = instruction address symbolic
+                # group(3) = instruction name
+                addr = int(match.group(1), 16)
+                if addr in objdump_insns:
+                    print("Duplicate address (0x%08x) found in %s" % (addr, elf_filename), file=sys.stderr)
+                objdump_insns[addr] = (os.path.basename(elf_filename), match.group(2), match.group(3).replace("\t", " "))
 
 
 def truncate_string(string, length):
@@ -160,14 +159,16 @@ with open(trace_filename, "r") as f:
             print('%-12d ' % (int(cycles)), end='')
 
         if insn_addr in objdump_insns:
-            source_location, objdump_insn_str = objdump_insns[insn_addr]
+            elf_filename, symbol, insn_str = objdump_insns[insn_addr]
             if args.truncate:
-                source_location = truncate_string(source_location, 40)
-                objdump_insn_str = truncate_string(objdump_insn_str, 40)
-            print("%08x: %-40s %-40s %-20s" % (insn_addr,
-                                               source_location,
-                                               objdump_insn_str,
-                                               reg_vals))
+                elf_filename = truncate_string(elf_filename, 20)
+                symbol = truncate_string(symbol, 40)
+                insn_str = truncate_string(insn_str, 40)
+            print("%08x: %-16s %-40s %-40s %-20s" % (insn_addr,
+                                                     elf_filename,
+                                                     symbol,
+                                                     insn_str,
+                                                     reg_vals))
         else:
             match = re.match(r'^\s*[0-9a-f]+[nmu]s\s+[0-9]+\s+[0-9a-f]+\s+[0-9a-f]+\s+(.*)',
                              insn_only)
