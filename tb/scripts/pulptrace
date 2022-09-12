@@ -108,7 +108,10 @@ with subprocess.Popen([objdump_bin, "--prefix-addresses"]
             # group(1) = instruction address
             # group(2) = instruction address symbolic
             # group(3) = instruction name
-            objdump_insns[int(match.group(1), 16)] = (
+            addr = int(match.group(1), 16)
+            if addr in objdump_insns:
+                print("Duplicate address (0x%08x) found in %s" % (addr, elf_filename), file=sys.stderr)
+            objdump_insns[addr] = (
                 match.group(2), match.group(3).replace("\t", " "))
 
 
