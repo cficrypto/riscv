@@ -143,6 +143,18 @@ with open(trace_filename, "r") as f:
     cycles_width = len(ll[1])
     # skip trace file "header"
     f.readline()
+    # print our own header
+    if args.time:
+        print('%*s ' % (time_width, "Time".center(time_width)), end='')
+    if args.cycles:
+        print('%*s ' % (cycles_width, "Cycle".center(cycles_width)), end='')
+    print("%-8s  %-*s %-40s %-50s %-20s" % ("Addr",
+                                            0 if len(args.elf_file) == 1 else 16,
+                                            "" if len(args.elf_file) == 1 else "Filename",
+                                            "Symbol",
+                                            "Instruction",
+                                            "Values"))
+
     # parse instructions
     for line in f:
         insn_line = line.split()
