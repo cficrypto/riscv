@@ -93,7 +93,8 @@ if os.getenv('RISCV'):
 else:
     objdump_bin = 'riscv32-unknown-elf-objdump'
 
-for elf_filename in args.elf_file:
+for e in args.elf_file:
+    (elf_filename, ignored_colon, offset) = e.partition(":")
     with subprocess.Popen([objdump_bin, "--prefix-addresses"]
                           + (['-Mnumeric'] if args.numeric else [])
                           + (['-Mno-aliases'] if args.no_aliases else [])
@@ -108,7 +109,7 @@ for elf_filename in args.elf_file:
                 # group(1) = instruction address
                 # group(2) = instruction address symbolic
                 # group(3) = instruction name
-                addr = int(match.group(1), 16)
+                addr = int(match.group(1), 16) + (int(offset or 0, 0) if offset else 0)
                 if addr in objdump_insns:
                     print("Duplicate address (0x%08x) found in %s" % (addr, elf_filename), file=sys.stderr)
                 objdump_insns[addr] = (os.path.basename(elf_filename), match.group(2), match.group(3).replace("\t", " "))
@@ -178,7 +179,7 @@ with open(trace_filename, "r") as f:
                 insn_str = reduce(lambda a, kv: a.replace(*kv),
                                   regs_alias.items(), insn_str)
 
-            print("%08x: %-40s %-40s %-20s" % (insn_addr,
+            print("%08x: %-57s %-40s %-20s" % (insn_addr,
                                                "",  # no objdump info
                                                insn_str,  # insn name
                                                reg_vals))
