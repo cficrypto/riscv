@@ -165,12 +165,8 @@ with open(trace_filename, "r") as f:
                 elf_filename = truncate_string(elf_filename, 20)
                 symbol = truncate_string(symbol, 40)
                 insn_str = truncate_string(insn_str, 40)
-            print("%08x: %-16s %-40s %-40s %-20s" % (insn_addr,
-                                                     elf_filename,
-                                                     symbol,
-                                                     insn_str,
-                                                     reg_vals))
         else:
+            elf_filename = symbol = ""
             match = re.match(r'^\s*[0-9a-f]+[nmu]s\s+[0-9]+\s+[0-9a-f]+\s+[0-9a-f]+\s+(.*)',
                              insn_only)
             insn_str = match.group(1)
@@ -179,10 +175,12 @@ with open(trace_filename, "r") as f:
                 insn_str = reduce(lambda a, kv: a.replace(*kv),
                                   regs_alias.items(), insn_str)
 
-            print("%08x: %-57s %-40s %-20s" % (insn_addr,
-                                               "",  # no objdump info
-                                               insn_str,  # insn name
-                                               reg_vals))
+        print("%08x: %-*s %-40s %-50s %-20s" % (insn_addr,
+                                                0 if len(args.elf_file) == 1 else 16,
+                                                "" if len(args.elf_file) == 1 else elf_filename,
+                                                symbol,
+                                                insn_str,
+                                                reg_vals))
 
 if args.output:
     sys.stdout.close()
