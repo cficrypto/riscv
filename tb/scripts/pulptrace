@@ -203,7 +203,7 @@ with open(trace_filename, "r") as f:
                 insn_str = reduce(lambda a, kv: a.replace(*kv),
                                   regs_alias.items(), insn_str)
 
-        print("%08x: %-*s %-40s %-50s %-20s" % (insn_addr,
+        print("%08x  %-*s %-40s %-50s %-20s" % (insn_addr,
                                                 0 if len(args.elf_file) == 1 else 16,
                                                 "" if len(args.elf_file) == 1 else elf_filename,
                                                 symbol,
