@@ -26,6 +26,7 @@ import argparse
 import sys
 import re
 import os
+import io
 import subprocess
 from functools import reduce
 from collections import OrderedDict
@@ -122,9 +123,24 @@ def truncate_string(string, length):
 # redirect to stdout to file if desired
 sys.stdout = open(args.output, "w") if args.output else sys.stdout
 
+
+def lastline(path):
+    with open(path, "rb") as f:
+        f.seek(-2, io.SEEK_END)
+        while f.read(1) != b"\n":
+            f.seek(-2, io.SEEK_CUR)
+
+        last_line = f.read()
+        f.seek(0, io.SEEK_SET)
+        return last_line
+
+
 with open(trace_filename, "r") as f:
     pc = 0
     last_irq = False
+    ll = lastline(trace_filename).split()
+    time_width = len(ll[0])
+    cycles_width = len(ll[1])
     # skip trace file "header"
     f.readline()
     # parse instructions
@@ -154,10 +170,10 @@ with open(trace_filename, "r") as f:
                               regs_alias.items(), reg_vals)
 
         if args.time:
-            print('%-12s ' % time, end='')
+            print('%*s ' % (time_width, time), end='')
 
         if args.cycles:
-            print('%-12d ' % (int(cycles)), end='')
+            print('%*d ' % (cycles_width, int(cycles)), end='')
 
         if insn_addr in objdump_insns:
             elf_filename, symbol, insn_str = objdump_insns[insn_addr]
