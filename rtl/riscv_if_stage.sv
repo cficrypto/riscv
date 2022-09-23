@@ -150,6 +150,7 @@ module riscv_if_stage
   begin
     fetch_addr_n = '0;
 
+    // BACCTODO these special cases need patches -> interrupts probably just unencrypted
     unique case (pc_mux_i)
       PC_BOOT:      fetch_addr_n = {boot_addr_i, 1'b0};
       PC_JUMP:      fetch_addr_n = jump_target_id_i;
@@ -333,11 +334,11 @@ module riscv_if_stage
   //
   // since it does not matter where we decompress instructions, we do it here
   // to ease timing closure
-  logic [31:0] instr_decompressed;
+  logic [31:0] instr_decompressed; // BACCTODO
   logic        illegal_c_insn;
   logic        instr_compressed_int;
 
-  riscv_compressed_decoder
+  riscv_compressed_decoder // BACCTODO
     #(
       .FPU(FPU)
      )

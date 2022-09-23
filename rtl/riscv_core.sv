@@ -37,8 +37,9 @@ import riscv_defines::*;
 
 module riscv_core
 #(
+  parameter INSTR_RDATA_WIDTH   = 40, // BACCTODO rename
+  parameter CFI_CAPACITY        = 160, // BACCTODO add to soc and to cfi_config
   parameter N_EXT_PERF_COUNTERS =  0,
-  parameter INSTR_RDATA_WIDTH   = 40, // BACCTODO 
   parameter PULP_SECURE         =  0,
   parameter N_PMP_ENTRIES       = 16,
   parameter USE_PMP             =  1, //if PULP_SECURE is 1, you can still not use the PMP
@@ -946,6 +947,7 @@ module riscv_core
 
   riscv_cs_registers
   #(
+    .CFI_TAG_WIDTH   ( CFI_CAPACITY          ),
     .N_EXT_CNT       ( N_EXT_PERF_COUNTERS   ),
     .FPU             ( FPU                   ),
     .APU             ( APU                   ),

@@ -36,6 +36,7 @@ import riscv_defines::*;
 
 module riscv_cs_registers
 #(
+  parameter CFI_TAG_WIDTH = 160,
   parameter N_HWLP        = 2,
   parameter N_HWLP_BITS   = $clog2(N_HWLP),
   parameter N_EXT_CNT     = 0,
@@ -143,7 +144,10 @@ module riscv_cs_registers
   input  logic                 mem_load_i,        // load from memory in this cycle
   input  logic                 mem_store_i,       // store to memory in this cycle
 
-  input  logic [N_EXT_CNT-1:0] ext_counters_i
+  input  logic [N_EXT_CNT-1:0] ext_counters_i,
+
+  // CFI registers
+  output logic [CFI_TAG_WIDTH-1:0] CFI_tag_o
 );
 
   localparam N_APU_CNT       = (APU==1) ? 4 : 0;
@@ -288,6 +292,9 @@ module riscv_cs_registers
 
   assign is_irq = csr_cause_i[5];
 
+  // CFI registers
+  logic [CFI_TAG_WIDTH-1:0] CFI_tag_n, CFI_tag_q;
+
   ////////////////////////////////////////////
   //   ____ ____  ____    ____              //
   //  / ___/ ___||  _ \  |  _ \ ___  __ _   //
@@ -305,7 +312,13 @@ if(PULP_SECURE==1) begin
   // read logic
   always_comb
   begin
+
+
     case (csr_addr_i)
+      // CFI reads
+      //BACCTODO handle reads 1
+      12'hA00: csr_rdata_int = CFI_tag_q[31:0];
+
       // fcsr: Floating-Point Control and Status Register (frm + fflags).
       12'h001: csr_rdata_int = (FPU == 1) ? {27'b0, fflags_q}        : '0;
       12'h002: csr_rdata_int = (FPU == 1) ? {29'b0, frm_q}           : '0;
@@ -392,6 +405,10 @@ end else begin //PULP_SECURE == 0
   begin
 
     case (csr_addr_i)
+      // CFI reads
+      //BACCTODO handle reads 2
+      12'hA00: csr_rdata_int = CFI_tag_q[31:0];
+
       // fcsr: Floating-Point Control and Status Register (frm + fflags).
       12'h001: csr_rdata_int = (FPU == 1) ? {27'b0, fflags_q}        : '0;
       12'h002: csr_rdata_int = (FPU == 1) ? {29'b0, frm_q}           : '0;
@@ -451,10 +468,19 @@ end else begin //PULP_SECURE == 0
   end
 end //PULP_SECURE
 
+// BACCTODO DELETEME
+always_comb 
+begin
+  if (csr_we_int) $display("csr write at: 0x%0h", csr_addr_i);  
+end
+
 if(PULP_SECURE==1) begin
   // write logic
   always_comb
   begin
+
+    CFI_tag_n                = CFI_tag_q;
+
     fflags_n                 = fflags_q;
     frm_n                    = frm_q;
     fprec_n                  = fprec_q;
@@ -483,6 +509,13 @@ if(PULP_SECURE==1) begin
     if (FPU == 1) if (fflags_we_i) fflags_n = fflags_i | fflags_q;
 
     casex (csr_addr_i)
+      // CFI writes
+      //BACCTODO handle writes 1
+      12'hA00: if (csr_we_int) begin
+        CFI_tag_n[31:0] = csr_wdata_int;
+        $display("CFI register[0]: %0h", CFI_tag_n[31:0]);
+      end
+
       // fcsr: Floating-Point Control and Status Register (frm, fflags, fprec).
       12'h001: if (csr_we_int) fflags_n = (FPU == 1) ? csr_wdata_int[C_FFLAG-1:0] : '0;
       12'h002: if (csr_we_int) frm_n    = (FPU == 1) ? csr_wdata_int[C_RM-1:0]    : '0;
@@ -716,6 +749,9 @@ end else begin //PULP_SECURE == 0
   // write logic
   always_comb
   begin
+
+    CFI_tag_n                = CFI_tag_q;
+
     fflags_n                 = fflags_q;
     frm_n                    = frm_q;
     fprec_n                  = fprec_q;
@@ -742,6 +778,13 @@ end else begin //PULP_SECURE == 0
     if (FPU == 1) if (fflags_we_i) fflags_n = fflags_i | fflags_q;
 
     case (csr_addr_i)
+      // CFI writes
+      //BACCTODO handle writes 2
+      12'hA00: if (csr_we_int) begin
+        CFI_tag_n[31:0] = csr_wdata_int;
+        $display("CFI register[0]: %0h", CFI_tag_n[31:0]);
+      end
+
       // fcsr: Floating-Point Control and Status Register (frm, fflags, fprec).
       12'h001: if (csr_we_int) fflags_n = (FPU == 1) ? csr_wdata_int[C_FFLAG-1:0] : '0;
       12'h002: if (csr_we_int) frm_n    = (FPU == 1) ? csr_wdata_int[C_RM-1:0]    : '0;
@@ -917,6 +960,8 @@ end //PULP_SECURE
   assign debug_ebreakm_o      = dcsr_q.ebreakm;
   assign debug_ebreaku_o      = dcsr_q.ebreaku;
 
+  // BACCTODO assign output
+  assign CFI_tag_o = CFI_tag_q;
 
 
   generate
