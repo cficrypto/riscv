@@ -317,7 +317,7 @@ if(PULP_SECURE==1) begin
     case (csr_addr_i)
       // CFI reads
       //BACCTODO handle reads 1
-      12'hA00: csr_rdata_int = CFI_tag_q[31:0];
+      CFI_TAG_BASE: csr_rdata_int = CFI_tag_q[31:0];
 
       // fcsr: Floating-Point Control and Status Register (frm + fflags).
       12'h001: csr_rdata_int = (FPU == 1) ? {27'b0, fflags_q}        : '0;
@@ -407,7 +407,7 @@ end else begin //PULP_SECURE == 0
     case (csr_addr_i)
       // CFI reads
       //BACCTODO handle reads 2
-      12'hA00: csr_rdata_int = CFI_tag_q[31:0];
+      CFI_TAG_BASE: csr_rdata_int = CFI_tag_q[31:0];
 
       // fcsr: Floating-Point Control and Status Register (frm + fflags).
       12'h001: csr_rdata_int = (FPU == 1) ? {27'b0, fflags_q}        : '0;
@@ -468,11 +468,6 @@ end else begin //PULP_SECURE == 0
   end
 end //PULP_SECURE
 
-// BACCTODO DELETEME
-always_comb 
-begin
-  if (csr_we_int) $display("csr write at: 0x%0h", csr_addr_i);  
-end
 
 if(PULP_SECURE==1) begin
   // write logic
@@ -511,9 +506,9 @@ if(PULP_SECURE==1) begin
     casex (csr_addr_i)
       // CFI writes
       //BACCTODO handle writes 1
-      12'hA00: if (csr_we_int) begin
+      CFI_TAG_BASE: if (csr_we_int) begin
         CFI_tag_n[31:0] = csr_wdata_int;
-        $display("CFI register[0]: %0h", CFI_tag_n[31:0]);
+        $display("** Note[%0t]: CFI register[0]: %0h", $time, csr_wdata_int);
       end
 
       // fcsr: Floating-Point Control and Status Register (frm, fflags, fprec).
@@ -780,9 +775,9 @@ end else begin //PULP_SECURE == 0
     case (csr_addr_i)
       // CFI writes
       //BACCTODO handle writes 2
-      12'hA00: if (csr_we_int) begin
+      CFI_TAG_BASE: if (csr_we_int) begin
         CFI_tag_n[31:0] = csr_wdata_int;
-        $display("CFI register[0]: %0h", CFI_tag_n[31:0]);
+        $display("** Note[%0t]: CFI register[0]: %0h", $time, csr_wdata_int);
       end
 
       // fcsr: Floating-Point Control and Status Register (frm, fflags, fprec).
@@ -1054,6 +1049,8 @@ end //PULP_SECURE
       dscratch0_q <= '0;
       dscratch1_q <= '0;
       mscratch_q  <= '0;
+
+      CFI_tag_q   <= '0;
     end
     else
     begin
@@ -1083,6 +1080,8 @@ end //PULP_SECURE
       dscratch0_q<= dscratch0_n;
       dscratch1_q<= dscratch1_n;
       mscratch_q <= mscratch_n;
+
+      CFI_tag_q  <= CFI_tag_n;
     end
   end
 
