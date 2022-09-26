@@ -32,6 +32,7 @@ module riscv_if_stage
 #(
   parameter N_HWLP          = 2,
   parameter RDATA_WIDTH     = 32, //BACCTODO is set in riscv_core
+  parameter CFI_TAG_WIDTH   = 160,
   parameter FPU             = 0,
   parameter DM_HaltAddress  = 32'h1A110800
 )
@@ -95,7 +96,11 @@ module riscv_if_stage
 
     // misc signals
     output logic        if_busy_o,             // is the IF stage busy fetching instructions?
-    output logic        perf_imiss_o           // Instruction Fetch Miss
+    output logic        perf_imiss_o,          // Instruction Fetch Miss
+
+    // CFI registers
+    input logic [CFI_TAG_WIDTH-1:0] CFI_tag_i,
+    input logic                     CFI_en_i
 );
 
   // offset FSM
@@ -349,6 +354,13 @@ module riscv_if_stage
     .is_compressed_o ( instr_compressed_int ),
     .illegal_instr_o ( illegal_c_insn       )
   );
+
+  // CFI
+  always_comb begin : CFI_decrypt_dummy
+    if (CFI_en_i) begin
+      $display("DECRYPT THIS %0h", fetch_rdata);
+    end
+  end
 
   // prefetch -> IF registers
   always_ff @(posedge clk, negedge rst_n)

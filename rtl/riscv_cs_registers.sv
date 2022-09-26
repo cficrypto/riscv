@@ -147,7 +147,8 @@ module riscv_cs_registers
   input  logic [N_EXT_CNT-1:0] ext_counters_i,
 
   // CFI registers
-  output logic [CFI_TAG_WIDTH-1:0] CFI_tag_o
+  output logic [CFI_TAG_WIDTH-1:0] CFI_tag_o,
+  output logic                     CFI_en_o
 );
 
   localparam N_APU_CNT       = (APU==1) ? 4 : 0;
@@ -294,6 +295,7 @@ module riscv_cs_registers
 
   // CFI registers
   logic [CFI_TAG_WIDTH-1:0] CFI_tag_n, CFI_tag_q;
+  logic CFI_en_n, CFI_en_q;
 
   ////////////////////////////////////////////
   //   ____ ____  ____    ____              //
@@ -317,7 +319,12 @@ if(PULP_SECURE==1) begin
     case (csr_addr_i)
       // CFI reads
       //BACCTODO handle reads 1
+      CFI_CFG_BASE: csr_rdata_int = {31'b0, CFI_en_q};
       CFI_TAG_BASE: csr_rdata_int = CFI_tag_q[31:0];
+      CFI_TAG_BASE + 1: csr_rdata_int = CFI_tag_q[63:32];
+      CFI_TAG_BASE + 2: csr_rdata_int = CFI_tag_q[95:64];
+      CFI_TAG_BASE + 3: csr_rdata_int = CFI_tag_q[127:96];
+      CFI_TAG_BASE + 4: csr_rdata_int = CFI_tag_q[159:128];
 
       // fcsr: Floating-Point Control and Status Register (frm + fflags).
       12'h001: csr_rdata_int = (FPU == 1) ? {27'b0, fflags_q}        : '0;
@@ -407,7 +414,12 @@ end else begin //PULP_SECURE == 0
     case (csr_addr_i)
       // CFI reads
       //BACCTODO handle reads 2
+      CFI_CFG_BASE: csr_rdata_int = {31'b0, CFI_en_q};
       CFI_TAG_BASE: csr_rdata_int = CFI_tag_q[31:0];
+      CFI_TAG_BASE + 1: csr_rdata_int = CFI_tag_q[63:32];
+      CFI_TAG_BASE + 2: csr_rdata_int = CFI_tag_q[95:64];
+      CFI_TAG_BASE + 3: csr_rdata_int = CFI_tag_q[127:96];
+      CFI_TAG_BASE + 4: csr_rdata_int = CFI_tag_q[159:128];
 
       // fcsr: Floating-Point Control and Status Register (frm + fflags).
       12'h001: csr_rdata_int = (FPU == 1) ? {27'b0, fflags_q}        : '0;
@@ -474,6 +486,7 @@ if(PULP_SECURE==1) begin
   always_comb
   begin
 
+    CFI_en_n                 = CFI_en_q;
     CFI_tag_n                = CFI_tag_q;
 
     fflags_n                 = fflags_q;
@@ -506,10 +519,12 @@ if(PULP_SECURE==1) begin
     casex (csr_addr_i)
       // CFI writes
       //BACCTODO handle writes 1
-      CFI_TAG_BASE: if (csr_we_int) begin
-        CFI_tag_n[31:0] = csr_wdata_int;
-        $display("** Note[%0t]: CFI register[0]: %0h", $time, csr_wdata_int);
-      end
+      CFI_CFG_BASE    : if (csr_we_int) CFI_en_n = csr_wdata_int[0];
+      CFI_TAG_BASE    : if (csr_we_int) CFI_tag_n[31:0]     = csr_wdata_int;
+      CFI_TAG_BASE + 1: if (csr_we_int) CFI_tag_n[63:32]    = csr_wdata_int;
+      CFI_TAG_BASE + 2: if (csr_we_int) CFI_tag_n[95:64]    = csr_wdata_int;
+      CFI_TAG_BASE + 3: if (csr_we_int) CFI_tag_n[127:96]   = csr_wdata_int;
+      CFI_TAG_BASE + 4: if (csr_we_int) CFI_tag_n[159:128]  = csr_wdata_int;
 
       // fcsr: Floating-Point Control and Status Register (frm, fflags, fprec).
       12'h001: if (csr_we_int) fflags_n = (FPU == 1) ? csr_wdata_int[C_FFLAG-1:0] : '0;
@@ -745,6 +760,7 @@ end else begin //PULP_SECURE == 0
   always_comb
   begin
 
+    CFI_en_n                 = CFI_en_q;
     CFI_tag_n                = CFI_tag_q;
 
     fflags_n                 = fflags_q;
@@ -775,10 +791,12 @@ end else begin //PULP_SECURE == 0
     case (csr_addr_i)
       // CFI writes
       //BACCTODO handle writes 2
-      CFI_TAG_BASE: if (csr_we_int) begin
-        CFI_tag_n[31:0] = csr_wdata_int;
-        $display("** Note[%0t]: CFI register[0]: %0h", $time, csr_wdata_int);
-      end
+      CFI_CFG_BASE    : if (csr_we_int) CFI_en_n = csr_wdata_int[0];
+      CFI_TAG_BASE    : if (csr_we_int) CFI_tag_n[31:0]     = csr_wdata_int;
+      CFI_TAG_BASE + 1: if (csr_we_int) CFI_tag_n[63:32]    = csr_wdata_int;
+      CFI_TAG_BASE + 2: if (csr_we_int) CFI_tag_n[95:64]    = csr_wdata_int;
+      CFI_TAG_BASE + 3: if (csr_we_int) CFI_tag_n[127:96]   = csr_wdata_int;
+      CFI_TAG_BASE + 4: if (csr_we_int) CFI_tag_n[159:128]  = csr_wdata_int;
 
       // fcsr: Floating-Point Control and Status Register (frm, fflags, fprec).
       12'h001: if (csr_we_int) fflags_n = (FPU == 1) ? csr_wdata_int[C_FFLAG-1:0] : '0;
@@ -957,6 +975,7 @@ end //PULP_SECURE
 
   // BACCTODO assign output
   assign CFI_tag_o = CFI_tag_q;
+  assign CFI_en_o  = CFI_en_q;
 
 
   generate
@@ -1050,6 +1069,7 @@ end //PULP_SECURE
       dscratch1_q <= '0;
       mscratch_q  <= '0;
 
+      CFI_en_q    <= '0;
       CFI_tag_q   <= '0;
     end
     else
@@ -1081,12 +1101,13 @@ end //PULP_SECURE
       dscratch1_q<= dscratch1_n;
       mscratch_q <= mscratch_n;
 
+      CFI_en_q   <= CFI_en_n;
       CFI_tag_q  <= CFI_tag_n;
     end
   end
 
   /////////////////////////////////////////////////////////////////
-  //   ____            __     ____                  _            //
+  //  ____            __     ____                  _             //
   // |  _ \ ___ _ __ / _|   / ___|___  _   _ _ __ | |_ ___ _ __  //
   // | |_) / _ \ '__| |_   | |   / _ \| | | | '_ \| __/ _ \ '__| //
   // |  __/  __/ |  |  _|  | |__| (_) | |_| | | | | ||  __/ |    //

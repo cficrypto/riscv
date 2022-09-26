@@ -452,7 +452,8 @@ parameter CSR_DSCRATCH0      = 12'h7b2; // optional
 parameter CSR_DSCRATCH1      = 12'h7b3; // optional
 
 // CFI CSR
-parameter CFI_TAG_BASE = 12'h7d0;
+parameter CFI_CFG_BASE = 12'h7d0;
+parameter CFI_TAG_BASE = 12'h7d1;
 
 
 endpackage

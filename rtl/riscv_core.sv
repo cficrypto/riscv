@@ -256,6 +256,10 @@ module riscv_core
   logic [31:0] csr_wdata;
   PrivLvl_t    current_priv_lvl;
 
+  // CFI CSR to IF signals
+  logic [CFI_CAPACITY-1:0]  CFI_tag;
+  logic                     CFI_en;
+
   // Data Memory Control:  From ID stage (id-ex pipe) <--> load store unit
   logic        data_we_ex;
   logic [1:0]  data_type_ex;
@@ -459,6 +463,7 @@ module riscv_core
   #(
     .N_HWLP              ( N_HWLP            ),
     .RDATA_WIDTH         ( INSTR_RDATA_WIDTH ),
+    .CFI_TAG_WIDTH       ( CFI_CAPACITY      ),
     .FPU                 ( FPU               ),
     .DM_HaltAddress      ( DM_HaltAddress    )
   )
@@ -525,7 +530,11 @@ module riscv_core
     .id_ready_i          ( id_ready          ),
 
     .if_busy_o           ( if_busy           ),
-    .perf_imiss_o        ( perf_imiss        )
+    .perf_imiss_o        ( perf_imiss        ),
+
+    //CFI
+    .CFI_tag_i           ( CFI_tag           ),
+    .CFI_en_i            ( CFI_en            )
   );
 
 
@@ -1047,7 +1056,10 @@ module riscv_core
     .mem_load_i              ( data_req_o & data_gnt_i & (~data_we_o) ),
     .mem_store_i             ( data_req_o & data_gnt_i & data_we_o    ),
 
-    .ext_counters_i          ( ext_perf_counters_i                    )
+    .ext_counters_i          ( ext_perf_counters_i                    ),
+
+    .CFI_tag_o               ( CFI_tag ),
+    .CFI_en_o                ( CFI_en  )
   );
 
   //  CSR access
