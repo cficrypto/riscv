@@ -33,6 +33,7 @@ module riscv_if_stage
   parameter N_HWLP          = 2,
   parameter RDATA_WIDTH     = 32, //BACCTODO is set in riscv_core
   parameter CFI_TAG_WIDTH   = 160,
+  parameter CFI_KEY         = 160'h1234567890ABCDEF, //BACCTODO is set in riscv_core
   parameter FPU             = 0,
   parameter DM_HaltAddress  = 32'h1A110800
 )
@@ -116,7 +117,7 @@ module riscv_if_stage
 
   logic              fetch_valid;
   logic              fetch_ready;
-  logic       [31:0] fetch_rdata; // BACCTODO??
+  logic       [RDATA_WIDTH-1:0] fetch_rdata; // BACCTODO yes
   logic       [31:0] fetch_addr;
   logic              is_hwlp_id_q, fetch_is_hwlp;
 
@@ -343,22 +344,52 @@ module riscv_if_stage
   logic        illegal_c_insn;
   logic        instr_compressed_int;
 
+  wire [RDATA_WIDTH-1:0] instr_decompressed_tmp;
+
   riscv_compressed_decoder // BACCTODO
     #(
+      .INSTR_WIDTH(RDATA_WIDTH),
       .FPU(FPU)
      )
   compressed_decoder_i
   (
+    .enable_i        (~CFI_en_i             ),
     .instr_i         ( fetch_rdata          ),
-    .instr_o         ( instr_decompressed   ),
+    .instr_o         ( instr_decompressed_tmp   ),
     .is_compressed_o ( instr_compressed_int ),
     .illegal_instr_o ( illegal_c_insn       )
   );
-
   // CFI
-  always_comb begin : CFI_decrypt_dummy
+  riscv_decrypt
+  #(
+    .RATE(RDATA_WIDTH ),
+    .CAPACITY (CFI_TAG_WIDTH )
+  )
+  riscv_decrypt_i (
+    .clk (clk ),
+    .rst_n (rst_n ),
+    .data_in (instr_decompressed_tmp ),
+    .active (CFI_en_i ),
+    .key (CFI_KEY ),
+    .tag (CFI_tag_i ),
+    .if_valid (if_valid ),
+    .csr (3'h0 ),
+    .busy ( ),
+    .decrypt_valid ( ),
+    .data_out  ( instr_decompressed)
+  );
+
+  
+
+
+  // CFI - DEBUG
+  always @(posedge clk, negedge rst_n) begin : CFI_decrypt_dummy
     if (CFI_en_i) begin
-      $display("DECRYPT THIS %0h", fetch_rdata);
+      $display("%t: DECRYPT THIS %010h (%08h)", $time, instr_decompressed, fetch_rdata);
+    end
+
+    if (instr_compressed_int) begin
+      $display("%t: Compressed %010h (%08h)", $time, instr_decompressed, fetch_rdata);
     end
   end
 
