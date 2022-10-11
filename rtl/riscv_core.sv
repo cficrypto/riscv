@@ -38,7 +38,8 @@ import riscv_defines::*;
 module riscv_core
 #(
   parameter INSTR_RDATA_WIDTH   = 40, // BACCTODO rename
-  parameter CFI_CAPACITY        = 160, // BACCTODO add to soc and to cfi_config
+  parameter CFI_CAPACITY        =160, // BACCTODO add to soc and to cfi_config
+  parameter CFI_CFG_BITS        =  4,
   parameter N_EXT_PERF_COUNTERS =  0,
   parameter PULP_SECURE         =  0,
   parameter N_PMP_ENTRIES       = 16,
@@ -258,7 +259,7 @@ module riscv_core
 
   // CFI CSR to IF signals
   logic [CFI_CAPACITY-1:0]  CFI_tag;
-  logic                     CFI_en;
+  logic [CFI_CFG_BITS-1:0]  CFI_CFG;
 
   // Data Memory Control:  From ID stage (id-ex pipe) <--> load store unit
   logic        data_we_ex;
@@ -534,7 +535,7 @@ module riscv_core
 
     //CFI
     .CFI_tag_i           ( CFI_tag           ),
-    .CFI_en_i            ( CFI_en            )
+    .CFI_CFG_i           ( CFI_CFG            )
   );
 
 
@@ -957,6 +958,7 @@ module riscv_core
   riscv_cs_registers
   #(
     .CFI_TAG_WIDTH   ( CFI_CAPACITY          ),
+    .CFI_CFG_BITS    ( CFI_CFG_BITS          ),
     .N_EXT_CNT       ( N_EXT_PERF_COUNTERS   ),
     .FPU             ( FPU                   ),
     .APU             ( APU                   ),
@@ -1059,7 +1061,7 @@ module riscv_core
     .ext_counters_i          ( ext_perf_counters_i                    ),
 
     .CFI_tag_o               ( CFI_tag ),
-    .CFI_en_o                ( CFI_en  )
+    .CFI_CFG_o               ( CFI_CFG )
   );
 
   //  CSR access

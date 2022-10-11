@@ -33,7 +33,8 @@ module riscv_if_stage
   parameter N_HWLP          = 2,
   parameter RDATA_WIDTH     = 32, //BACCTODO is set in riscv_core
   parameter CFI_TAG_WIDTH   = 160,
-  parameter CFI_KEY         = 160'h1234567890ABCDEF, //BACCTODO is set in riscv_core
+  parameter CFI_KEY         = 160'h1234567890ABCDEF, //BACCTODO is set in 
+  parameter CFI_CFG_BITS    = 4,
   parameter FPU             = 0,
   parameter DM_HaltAddress  = 32'h1A110800
 )
@@ -101,7 +102,7 @@ module riscv_if_stage
 
     // CFI registers
     input logic [CFI_TAG_WIDTH-1:0] CFI_tag_i,
-    input logic                     CFI_en_i
+    input logic [CFI_CFG_BITS-1:0]  CFI_CFG_i
 );
 
   // offset FSM
@@ -353,7 +354,7 @@ module riscv_if_stage
      )
   compressed_decoder_i
   (
-    .enable_i        (~CFI_en_i             ),
+    .enable_i        (~CFI_CFG_i[0]         ),
     .instr_i         ( fetch_rdata          ),
     .instr_o         ( instr_decompressed_tmp   ),
     .is_compressed_o ( instr_compressed_int ),
@@ -369,11 +370,11 @@ module riscv_if_stage
     .clk (clk ),
     .rst_n (rst_n ),
     .data_in (instr_decompressed_tmp ),
-    .active (CFI_en_i ),
+    .active (CFI_CFG_i[0] ),
     .key (CFI_KEY ),
     .tag (CFI_tag_i ),
     .if_valid (if_valid ),
-    .csr (3'h0 ),
+    .csr (CFI_CFG_i[CFI_CFG_BITS-1:1]),
     .busy ( ),
     .decrypt_valid ( ),
     .data_out  ( instr_decompressed)
@@ -384,13 +385,13 @@ module riscv_if_stage
 
   // CFI - DEBUG
   always @(posedge clk, negedge rst_n) begin : CFI_decrypt_dummy
-    if (CFI_en_i) begin
+    if (CFI_CFG_i[0]) begin
       $display("%t: DECRYPT THIS %010h (%08h)", $time, instr_decompressed, fetch_rdata);
     end
 
-    if (instr_compressed_int) begin
-      $display("%t: Compressed %010h (%08h)", $time, instr_decompressed, fetch_rdata);
-    end
+    // if (instr_compressed_int) begin
+    //   $display("%t: Compressed %010h (%08h)", $time, instr_decompressed, fetch_rdata);
+    // end
   end
 
   // prefetch -> IF registers
@@ -448,7 +449,7 @@ module riscv_if_stage
 
   assign is_hwlp_id_o = is_hwlp_id_q & instr_valid_id_o;
 
-  assign if_ready = valid & id_ready_i;
+  assign if_ready = valid & id_ready_i; // BACCTODO decrypt ready
   assign if_valid = (~halt_if_i) & if_ready;
 
   //----------------------------------------------------------------------------

@@ -37,6 +37,7 @@ import riscv_defines::*;
 module riscv_cs_registers
 #(
   parameter CFI_TAG_WIDTH = 160,
+  parameter CFI_CFG_BITS  = 4,
   parameter N_HWLP        = 2,
   parameter N_HWLP_BITS   = $clog2(N_HWLP),
   parameter N_EXT_CNT     = 0,
@@ -148,7 +149,7 @@ module riscv_cs_registers
 
   // CFI registers
   output logic [CFI_TAG_WIDTH-1:0] CFI_tag_o,
-  output logic                     CFI_en_o
+  output logic [CFI_CFG_BITS-1:0]  CFI_CFG_o
 );
 
   localparam N_APU_CNT       = (APU==1) ? 4 : 0;
@@ -295,7 +296,7 @@ module riscv_cs_registers
 
   // CFI registers
   logic [CFI_TAG_WIDTH-1:0] CFI_tag_n, CFI_tag_q;
-  logic CFI_en_n, CFI_en_q;
+  logic [CFI_CFG_BITS-1:0]  CFI_CFG_n, CFI_CFG_q;
 
   ////////////////////////////////////////////
   //   ____ ____  ____    ____              //
@@ -319,7 +320,10 @@ if(PULP_SECURE==1) begin
     case (csr_addr_i)
       // CFI reads
       //BACCTODO handle reads 1
-      CFI_CFG_BASE: csr_rdata_int = {31'b0, CFI_en_q};
+      CFI_CFG_BASE: begin
+        csr_rdata_int = '0;
+        csr_rdata_int[CFI_CFG_BITS-1:0] = CFI_CFG_q;
+      end
       CFI_TAG_BASE: csr_rdata_int = CFI_tag_q[31:0];
       CFI_TAG_BASE + 1: csr_rdata_int = CFI_tag_q[63:32];
       CFI_TAG_BASE + 2: csr_rdata_int = CFI_tag_q[95:64];
@@ -414,7 +418,10 @@ end else begin //PULP_SECURE == 0
     case (csr_addr_i)
       // CFI reads
       //BACCTODO handle reads 2
-      CFI_CFG_BASE: csr_rdata_int = {31'b0, CFI_en_q};
+      CFI_CFG_BASE: begin
+        csr_rdata_int = '0;
+        csr_rdata_int[CFI_CFG_BITS-1:0] = CFI_CFG_q;
+      end
       CFI_TAG_BASE: csr_rdata_int = CFI_tag_q[31:0];
       CFI_TAG_BASE + 1: csr_rdata_int = CFI_tag_q[63:32];
       CFI_TAG_BASE + 2: csr_rdata_int = CFI_tag_q[95:64];
@@ -486,7 +493,7 @@ if(PULP_SECURE==1) begin
   always_comb
   begin
 
-    CFI_en_n                 = CFI_en_q;
+    CFI_CFG_n                 = CFI_CFG_q;
     CFI_tag_n                = CFI_tag_q;
 
     fflags_n                 = fflags_q;
@@ -519,7 +526,7 @@ if(PULP_SECURE==1) begin
     casex (csr_addr_i)
       // CFI writes
       //BACCTODO handle writes 1
-      CFI_CFG_BASE    : if (csr_we_int) CFI_en_n = csr_wdata_int[0];
+      CFI_CFG_BASE    : if (csr_we_int) CFI_CFG_n = csr_wdata_int[CFI_CFG_BITS-1:0];
       CFI_TAG_BASE    : if (csr_we_int) CFI_tag_n[31:0]     = csr_wdata_int;
       CFI_TAG_BASE + 1: if (csr_we_int) CFI_tag_n[63:32]    = csr_wdata_int;
       CFI_TAG_BASE + 2: if (csr_we_int) CFI_tag_n[95:64]    = csr_wdata_int;
@@ -760,7 +767,7 @@ end else begin //PULP_SECURE == 0
   always_comb
   begin
 
-    CFI_en_n                 = CFI_en_q;
+    CFI_CFG_n                 = CFI_CFG_q;
     CFI_tag_n                = CFI_tag_q;
 
     fflags_n                 = fflags_q;
@@ -791,7 +798,7 @@ end else begin //PULP_SECURE == 0
     case (csr_addr_i)
       // CFI writes
       //BACCTODO handle writes 2
-      CFI_CFG_BASE    : if (csr_we_int) CFI_en_n = csr_wdata_int[0];
+      CFI_CFG_BASE    : if (csr_we_int) CFI_CFG_n = csr_wdata_int[CFI_CFG_BITS-1:0];
       CFI_TAG_BASE    : if (csr_we_int) CFI_tag_n[31:0]     = csr_wdata_int;
       CFI_TAG_BASE + 1: if (csr_we_int) CFI_tag_n[63:32]    = csr_wdata_int;
       CFI_TAG_BASE + 2: if (csr_we_int) CFI_tag_n[95:64]    = csr_wdata_int;
@@ -975,7 +982,7 @@ end //PULP_SECURE
 
   // BACCTODO assign output
   assign CFI_tag_o = CFI_tag_q;
-  assign CFI_en_o  = CFI_en_q;
+  assign CFI_CFG_o  = CFI_CFG_q;
 
 
   generate
@@ -1069,7 +1076,7 @@ end //PULP_SECURE
       dscratch1_q <= '0;
       mscratch_q  <= '0;
 
-      CFI_en_q    <= '0;
+      CFI_CFG_q    <= '0;
       CFI_tag_q   <= '0;
     end
     else
@@ -1101,7 +1108,7 @@ end //PULP_SECURE
       dscratch1_q<= dscratch1_n;
       mscratch_q <= mscratch_n;
 
-      CFI_en_q   <= CFI_en_n;
+      CFI_CFG_q   <= CFI_CFG_n;
       CFI_tag_q  <= CFI_tag_n;
     end
   end
