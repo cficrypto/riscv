@@ -74,17 +74,17 @@ module riscv_fetch_fifo #(
   assign rdata = (valid_Q[0]) ? rdata_Q[0] : ( in_rdata_i & {RDATA_WIDTH{in_valid_i}} );
   assign valid = valid_Q[0] || in_valid_i || is_hwlp_Q[1];
 
-  assign rdata_unaligned = (valid_Q[1]) ? {rdata_Q[1][15:0], rdata[31:16]} : {in_rdata_i[15:0], rdata[31:16]}; // BACCTODO we ignore unaligned accesses
+  assign rdata_unaligned = rdata; //(valid_Q[1]) ? {rdata_Q[1][15:0], rdata[31:16]} : {in_rdata_i[15:0], rdata[31:16]}; // BACCTODO we ignore unaligned accesses
   // it is implied that rdata_valid_Q[0] is set
   assign valid_unaligned = (valid_Q[1] || (valid_Q[0] && in_valid_i));
 
   // FIXME // BACCTODO those is_compressed signals could make problems -> could indicate unaligned and/or compressed incorrectly with encrypted instrs 
   assign unaligned_is_compressed_o  = unaligned_is_compressed;
 
-  assign unaligned_is_compressed    = rdata[17:16] != 2'b11;
-  assign aligned_is_compressed      = rdata[1:0] != 2'b11;
-  assign unaligned_is_compressed_st = valid_Q[0] && rdata_Q[0][17:16] != 2'b11;
-  assign aligned_is_compressed_st   = valid_Q[0] && rdata_Q[0][1:0] != 2'b11;
+  assign unaligned_is_compressed    = 0; //rdata[17:16] != 2'b11;
+  assign aligned_is_compressed      = 0; //rdata[1:0] != 2'b11;
+  assign unaligned_is_compressed_st = 0; //valid_Q[0] && rdata_Q[0][17:16] != 2'b11;
+  assign aligned_is_compressed_st   = 0; //valid_Q[0] && rdata_Q[0][1:0] != 2'b11;
 
   //////////////////////////////////////////////////////////////////////////////
   // instruction aligner (if unaligned)
