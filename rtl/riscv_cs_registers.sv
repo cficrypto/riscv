@@ -36,6 +36,8 @@ import riscv_defines::*;
 
 module riscv_cs_registers
 #(
+  parameter CFI_TAG_WIDTH = 160,
+  parameter CFI_CFG_BITS  = 4,
   parameter N_HWLP        = 2,
   parameter N_HWLP_BITS   = $clog2(N_HWLP),
   parameter N_EXT_CNT     = 0,
@@ -143,7 +145,11 @@ module riscv_cs_registers
   input  logic                 mem_load_i,        // load from memory in this cycle
   input  logic                 mem_store_i,       // store to memory in this cycle
 
-  input  logic [N_EXT_CNT-1:0] ext_counters_i
+  input  logic [N_EXT_CNT-1:0] ext_counters_i,
+
+  // CFI registers
+  output logic [CFI_TAG_WIDTH-1:0] CFI_tag_o,
+  output logic [CFI_CFG_BITS-1:0]  CFI_CFG_o
 );
 
   localparam N_APU_CNT       = (APU==1) ? 4 : 0;
@@ -271,7 +277,6 @@ module riscv_cs_registers
   logic [MAX_N_PMP_ENTRIES-1:0] pmpcfg_we;
 
   // Performance Counter Signals
-  logic                          id_valid_q;
   logic [N_PERF_COUNTERS-1:0]    PCCR_in;  // input signals for each counter category
   logic [N_PERF_COUNTERS-1:0]    PCCR_inc, PCCR_inc_q; // should the counter be increased?
 
@@ -288,6 +293,10 @@ module riscv_cs_registers
 
 
   assign is_irq = csr_cause_i[5];
+
+  // CFI registers
+  logic [CFI_TAG_WIDTH-1:0] CFI_tag_n, CFI_tag_q;
+  logic [CFI_CFG_BITS-1:0]  CFI_CFG_n, CFI_CFG_q;
 
   ////////////////////////////////////////////
   //   ____ ____  ____    ____              //
@@ -306,7 +315,21 @@ if(PULP_SECURE==1) begin
   // read logic
   always_comb
   begin
+
+
     case (csr_addr_i)
+      // CFI reads
+      //BACCTODO handle reads 1
+      CFI_CFG_BASE: begin
+        csr_rdata_int = '0;
+        csr_rdata_int[CFI_CFG_BITS-1:0] = CFI_CFG_q;
+      end
+      CFI_TAG_BASE: csr_rdata_int = CFI_tag_q[31:0];
+      CFI_TAG_BASE + 1: csr_rdata_int = CFI_tag_q[63:32];
+      CFI_TAG_BASE + 2: csr_rdata_int = CFI_tag_q[95:64];
+      CFI_TAG_BASE + 3: csr_rdata_int = CFI_tag_q[127:96];
+      CFI_TAG_BASE + 4: csr_rdata_int = CFI_tag_q[159:128];
+
       // fcsr: Floating-Point Control and Status Register (frm + fflags).
       12'h001: csr_rdata_int = (FPU == 1) ? {27'b0, fflags_q}        : '0;
       12'h002: csr_rdata_int = (FPU == 1) ? {29'b0, frm_q}           : '0;
@@ -393,6 +416,18 @@ end else begin //PULP_SECURE == 0
   begin
 
     case (csr_addr_i)
+      // CFI reads
+      //BACCTODO handle reads 2
+      CFI_CFG_BASE: begin
+        csr_rdata_int = '0;
+        csr_rdata_int[CFI_CFG_BITS-1:0] = CFI_CFG_q;
+      end
+      CFI_TAG_BASE: csr_rdata_int = CFI_tag_q[31:0];
+      CFI_TAG_BASE + 1: csr_rdata_int = CFI_tag_q[63:32];
+      CFI_TAG_BASE + 2: csr_rdata_int = CFI_tag_q[95:64];
+      CFI_TAG_BASE + 3: csr_rdata_int = CFI_tag_q[127:96];
+      CFI_TAG_BASE + 4: csr_rdata_int = CFI_tag_q[159:128];
+
       // fcsr: Floating-Point Control and Status Register (frm + fflags).
       12'h001: csr_rdata_int = (FPU == 1) ? {27'b0, fflags_q}        : '0;
       12'h002: csr_rdata_int = (FPU == 1) ? {29'b0, frm_q}           : '0;
@@ -452,10 +487,15 @@ end else begin //PULP_SECURE == 0
   end
 end //PULP_SECURE
 
+
 if(PULP_SECURE==1) begin
   // write logic
   always_comb
   begin
+
+    CFI_CFG_n                 = CFI_CFG_q;
+    CFI_tag_n                = CFI_tag_q;
+
     fflags_n                 = fflags_q;
     frm_n                    = frm_q;
     fprec_n                  = fprec_q;
@@ -484,6 +524,15 @@ if(PULP_SECURE==1) begin
     if (FPU == 1) if (fflags_we_i) fflags_n = fflags_i | fflags_q;
 
     casex (csr_addr_i)
+      // CFI writes
+      //BACCTODO handle writes 1
+      CFI_CFG_BASE    : if (csr_we_int) CFI_CFG_n = csr_wdata_int[CFI_CFG_BITS-1:0];
+      CFI_TAG_BASE    : if (csr_we_int) CFI_tag_n[31:0]     = csr_wdata_int;
+      CFI_TAG_BASE + 1: if (csr_we_int) CFI_tag_n[63:32]    = csr_wdata_int;
+      CFI_TAG_BASE + 2: if (csr_we_int) CFI_tag_n[95:64]    = csr_wdata_int;
+      CFI_TAG_BASE + 3: if (csr_we_int) CFI_tag_n[127:96]   = csr_wdata_int;
+      CFI_TAG_BASE + 4: if (csr_we_int) CFI_tag_n[159:128]  = csr_wdata_int;
+
       // fcsr: Floating-Point Control and Status Register (frm, fflags, fprec).
       12'h001: if (csr_we_int) fflags_n = (FPU == 1) ? csr_wdata_int[C_FFLAG-1:0] : '0;
       12'h002: if (csr_we_int) frm_n    = (FPU == 1) ? csr_wdata_int[C_RM-1:0]    : '0;
@@ -717,6 +766,10 @@ end else begin //PULP_SECURE == 0
   // write logic
   always_comb
   begin
+
+    CFI_CFG_n                 = CFI_CFG_q;
+    CFI_tag_n                = CFI_tag_q;
+
     fflags_n                 = fflags_q;
     frm_n                    = frm_q;
     fprec_n                  = fprec_q;
@@ -743,6 +796,15 @@ end else begin //PULP_SECURE == 0
     if (FPU == 1) if (fflags_we_i) fflags_n = fflags_i | fflags_q;
 
     case (csr_addr_i)
+      // CFI writes
+      //BACCTODO handle writes 2
+      CFI_CFG_BASE    : if (csr_we_int) CFI_CFG_n = csr_wdata_int[CFI_CFG_BITS-1:0];
+      CFI_TAG_BASE    : if (csr_we_int) CFI_tag_n[31:0]     = csr_wdata_int;
+      CFI_TAG_BASE + 1: if (csr_we_int) CFI_tag_n[63:32]    = csr_wdata_int;
+      CFI_TAG_BASE + 2: if (csr_we_int) CFI_tag_n[95:64]    = csr_wdata_int;
+      CFI_TAG_BASE + 3: if (csr_we_int) CFI_tag_n[127:96]   = csr_wdata_int;
+      CFI_TAG_BASE + 4: if (csr_we_int) CFI_tag_n[159:128]  = csr_wdata_int;
+
       // fcsr: Floating-Point Control and Status Register (frm, fflags, fprec).
       12'h001: if (csr_we_int) fflags_n = (FPU == 1) ? csr_wdata_int[C_FFLAG-1:0] : '0;
       12'h002: if (csr_we_int) frm_n    = (FPU == 1) ? csr_wdata_int[C_RM-1:0]    : '0;
@@ -918,6 +980,9 @@ end //PULP_SECURE
   assign debug_ebreakm_o      = dcsr_q.ebreakm;
   assign debug_ebreaku_o      = dcsr_q.ebreaku;
 
+  // BACCTODO assign output
+  assign CFI_tag_o = CFI_tag_q;
+  assign CFI_CFG_o  = CFI_CFG_q;
 
 
   generate
@@ -1010,6 +1075,9 @@ end //PULP_SECURE
       dscratch0_q <= '0;
       dscratch1_q <= '0;
       mscratch_q  <= '0;
+
+      CFI_CFG_q    <= '0;
+      CFI_tag_q   <= '0;
     end
     else
     begin
@@ -1039,11 +1107,14 @@ end //PULP_SECURE
       dscratch0_q<= dscratch0_n;
       dscratch1_q<= dscratch1_n;
       mscratch_q <= mscratch_n;
+
+      CFI_CFG_q   <= CFI_CFG_n;
+      CFI_tag_q  <= CFI_tag_n;
     end
   end
 
   /////////////////////////////////////////////////////////////////
-  //   ____            __     ____                  _            //
+  //  ____            __     ____                  _             //
   // |  _ \ ___ _ __ / _|   / ___|___  _   _ _ __ | |_ ___ _ __  //
   // | |_) / _ \ '__| |_   | |   / _ \| | | | '_ \| __/ _ \ '__| //
   // |  __/  __/ |  |  _|  | |__| (_) | |_| | | | | ||  __/ |    //
@@ -1053,14 +1124,14 @@ end //PULP_SECURE
 
   assign PCCR_in[0]  = 1'b1;                                          // cycle counter
   assign PCCR_in[1]  = id_valid_i & is_decoding_i;                    // instruction counter
-  assign PCCR_in[2]  = ld_stall_i & id_valid_q;                       // nr of load use hazards
-  assign PCCR_in[3]  = jr_stall_i & id_valid_q;                       // nr of jump register hazards
+  assign PCCR_in[2]  = id_valid_i & ld_stall_i;                       // nr of load use hazards
+  assign PCCR_in[3]  = id_valid_i & jr_stall_i;                       // nr of jump register hazards
   assign PCCR_in[4]  = imiss_i & (~pc_set_i);                         // cycles waiting for instruction fetches, excluding jumps and branches
   assign PCCR_in[5]  = mem_load_i;                                    // nr of loads
   assign PCCR_in[6]  = mem_store_i;                                   // nr of stores
-  assign PCCR_in[7]  = jump_i                     & id_valid_q;       // nr of jumps (unconditional)
-  assign PCCR_in[8]  = branch_i                   & id_valid_q;       // nr of branches (conditional)
-  assign PCCR_in[9]  = branch_i & branch_taken_i  & id_valid_q;       // nr of taken branches (conditional)
+  assign PCCR_in[7]  = jump_i                     & id_valid_i;       // nr of jumps (unconditional)
+  assign PCCR_in[8]  = branch_i                   & id_valid_i;       // nr of branches (conditional)
+  assign PCCR_in[9]  = branch_i & branch_taken_i  & id_valid_i;       // nr of taken branches (conditional)
   assign PCCR_in[10] = id_valid_i & is_decoding_i & is_compressed_i;  // compressed instruction counter
   assign PCCR_in[11] = pipeline_stall_i;                              //extra cycles from elw
 
@@ -1198,8 +1269,6 @@ end //PULP_SECURE
   begin
     if (rst_n == 1'b0)
     begin
-      id_valid_q <= 1'b0;
-
       PCER_q <= '0;
       PCMR_q <= 2'h3;
 
@@ -1211,8 +1280,6 @@ end //PULP_SECURE
     end
     else
     begin
-      id_valid_q <= id_valid_i;
-
       PCER_q <= PCER_n;
       PCMR_q <= PCMR_n;
 

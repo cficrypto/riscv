@@ -37,6 +37,9 @@ import riscv_defines::*;
 
 module riscv_core
 #(
+  parameter INSTR_RDATA_WIDTH   = 40, // BACCTODO rename
+  parameter CFI_CAPACITY        =160, // BACCTODO add to soc and to cfi_config
+  parameter CFI_CFG_BITS        =  4,
   parameter N_EXT_PERF_COUNTERS =  0,
   parameter INSTR_RDATA_WIDTH   = 40, // BACCTODO 
   parameter PULP_SECURE         =  0,
@@ -255,6 +258,10 @@ module riscv_core
   logic [31:0] csr_wdata;
   PrivLvl_t    current_priv_lvl;
 
+  // CFI CSR to IF signals
+  logic [CFI_CAPACITY-1:0]  CFI_tag;
+  logic [CFI_CFG_BITS-1:0]  CFI_CFG;
+
   // Data Memory Control:  From ID stage (id-ex pipe) <--> load store unit
   logic        data_we_ex;
   logic [1:0]  data_type_ex;
@@ -458,6 +465,7 @@ module riscv_core
   #(
     .N_HWLP              ( N_HWLP            ),
     .RDATA_WIDTH         ( INSTR_RDATA_WIDTH ),
+    .CFI_TAG_WIDTH       ( CFI_CAPACITY      ),
     .FPU                 ( FPU               ),
     .DM_HaltAddress      ( DM_HaltAddress    )
   )
@@ -524,7 +532,11 @@ module riscv_core
     .id_ready_i          ( id_ready          ),
 
     .if_busy_o           ( if_busy           ),
-    .perf_imiss_o        ( perf_imiss        )
+    .perf_imiss_o        ( perf_imiss        ),
+
+    //CFI
+    .CFI_tag_i           ( CFI_tag           ),
+    .CFI_CFG_i           ( CFI_CFG            )
   );
 
 
@@ -946,6 +958,8 @@ module riscv_core
 
   riscv_cs_registers
   #(
+    .CFI_TAG_WIDTH   ( CFI_CAPACITY          ),
+    .CFI_CFG_BITS    ( CFI_CFG_BITS          ),
     .N_EXT_CNT       ( N_EXT_PERF_COUNTERS   ),
     .FPU             ( FPU                   ),
     .APU             ( APU                   ),
@@ -1045,7 +1059,10 @@ module riscv_core
     .mem_load_i              ( data_req_o & data_gnt_i & (~data_we_o) ),
     .mem_store_i             ( data_req_o & data_gnt_i & data_we_o    ),
 
-    .ext_counters_i          ( ext_perf_counters_i                    )
+    .ext_counters_i          ( ext_perf_counters_i                    ),
+
+    .CFI_tag_o               ( CFI_tag ),
+    .CFI_CFG_o               ( CFI_CFG )
   );
 
   //  CSR access

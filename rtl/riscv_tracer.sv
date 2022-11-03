@@ -136,48 +136,42 @@ module riscv_tracer (
 
     function string regAddrToStr(input logic [5:0] addr);
       begin
-        // TODO: use this function to also format the arguments to the
-        // instructions
-        if (SymbolicRegs) begin // format according to RISC-V ABI
-          if (addr >= 42)
-            return $sformatf(" f%0d", addr-32);
-          else if (addr > 32)
-            return $sformatf("  f%0d", addr-32);
-          else begin
-            if (addr == 0)
-              return $sformatf("zero");
-            else if (addr == 1)
-              return $sformatf("  ra");
-            else if (addr == 2)
-              return $sformatf("  sp");
-            else if (addr == 3)
-              return $sformatf("  gp");
-            else if (addr == 4)
-              return $sformatf("  tp");
-            else if (addr >= 5 && addr <= 7)
-              return $sformatf("  t%0d", addr-5);
-            else if (addr >= 8 && addr <= 9)
-              return $sformatf("  s%0d", addr-8);
-            else if (addr >= 10 && addr <= 17)
-              return $sformatf("  a%0d", addr-10);
-            else if (addr >= 18 && addr <= 25)
-              return $sformatf("  s%0d", addr-16);
-            else if (addr >= 26 && addr <= 27)
-              return $sformatf(" s%0d", addr-16);
-            else if (addr >= 28 && addr <= 31)
-              return $sformatf("  t%0d", addr-25);
-            else
-              return $sformatf("UNKNOWN %0d", addr);
-          end
-        end else begin
-          if (addr >= 42)
-            return $sformatf("f%0d", addr-32);
-          else if (addr > 32)
-            return $sformatf(" f%0d", addr-32);
-          else if (addr < 10)
-            return $sformatf(" x%0d", addr);
+        if (addr >= 32) begin
+          addr -= 32;
+          if (addr <= 7)
+            return $sformatf("ft%d", addr);
+          else if (addr >= 8 && addr <= 9)
+            return $sformatf("fs%d", addr-8);
+          else if (addr >= 10 && addr <= 17)
+            return $sformatf("fa%d", addr-10);
+          else if (addr >= 18 && addr <= 27)
+            return $sformatf("fs%d", addr-16);
+          else if (addr >= 28 && addr <= 31)
+            return $sformatf("ft%d", addr-20);
           else
-            return $sformatf("x%0d", addr);
+            return $sformatf("x%d", addr+32); // never reached
+          end
+        else begin
+          if (addr == 0)
+            return $sformatf("zero");
+          else if (addr == 1)
+            return $sformatf("ra");
+          else if (addr == 2)
+            return $sformatf("sp");
+          else if (addr == 3)
+            return $sformatf("gp");
+          else if (addr == 4)
+            return $sformatf("tp");
+          else if (addr >= 5 && addr <= 7)
+            return $sformatf("t%0d", addr-5);
+          else if (addr >= 8 && addr <= 9)
+            return $sformatf("s%0d", addr-8);
+          else if (addr >= 10 && addr <= 17)
+            return $sformatf("a%0d", addr-10);
+          else if (addr >= 18 && addr <= 27)
+            return $sformatf("s%0d", addr-16);
+          else if (addr >= 28 && addr <= 31)
+            return $sformatf("t%0d", addr-25);
         end
       end
     endfunction
@@ -193,12 +187,12 @@ module riscv_tracer (
 
         foreach(regs_write[i]) begin
           if (regs_write[i].addr != 0)
-            $fwrite(f, " %s=%08x", regAddrToStr(regs_write[i].addr), regs_write[i].value);
+            $fwrite(f, " %-4s=%08x", regAddrToStr(regs_write[i].addr), regs_write[i].value);
         end
 
         foreach(regs_read[i]) begin
           if (regs_read[i].addr != 0)
-            $fwrite(f, " %s:%08x", regAddrToStr(regs_read[i].addr), regs_read[i].value);
+            $fwrite(f, " %-4s:%08x", regAddrToStr(regs_read[i].addr), regs_read[i].value);
         end
 
         if (mem_access.size() > 0) begin
@@ -222,7 +216,7 @@ module riscv_tracer (
         regs_read.push_back('{rs1, rs1_value});
         regs_read.push_back('{rs2, rs2_value});
         regs_write.push_back('{rd, 'x});
-        str = $sformatf("%-16s x%0d, x%0d, x%0d", mnemonic, rd, rs1, rs2);
+        str = $sformatf("%-4s %s/x%0d, %s/x%0d, %s/x%0d", mnemonic, regAddrToStr(rd), rd, regAddrToStr(rs1), rs1, regAddrToStr(rs2), rs2);
       end
     endfunction // printRInstr
 
@@ -231,7 +225,7 @@ module riscv_tracer (
         regs_read.push_back('{rs1, rs1_value});
         regs_read.push_back('{rs2, rs2_value});
         regs_write.push_back('{rd, 'x});
-        str = $sformatf("%-16s x%0d, x%0d, x%0d, 0x%0d", mnemonic, rd, rs1, rs2, $unsigned(imm_s3_type[4:0]));
+        str = $sformatf("%-4s %s/x%0d, %s/x%0d, %s/x%0d, 0x%0d", mnemonic, regAddrToStr(rd), rd, regAddrToStr(rs1), rs1, regAddrToStr(rs2), rs2, $unsigned(imm_s3_type[4:0]));
       end
     endfunction // printAddNInstr
 
@@ -239,7 +233,7 @@ module riscv_tracer (
       begin
         regs_read.push_back('{rs1, rs1_value});
         regs_write.push_back('{rd, 'x});
-        str = $sformatf("%-16s x%0d, x%0d", mnemonic, rd, rs1);
+        str = $sformatf("%-4s %s/x%0d,%s/x%0d", mnemonic, regAddrToStr(rd), rd, regAddrToStr(rs1), rs1);
       end
     endfunction // printR1Instr
 
@@ -249,7 +243,7 @@ module riscv_tracer (
         regs_read.push_back('{rs1, rs1_value});
         regs_read.push_back('{rs2, rs2_value});
         regs_write.push_back('{rd, 'x});
-        str = $sformatf("%-16s x%0d, x%0d, x%0d", mnemonic, rd, rs1, rs2);
+        str = $sformatf("%-4s %s/x%0d,%s/x%0d,%s/x%0d", mnemonic, regAddrToStr(rd), rd, regAddrToStr(rs1), rs1, regAddrToStr(rs2), rs2);
       end
     endfunction // printR3Instr
 
@@ -259,7 +253,7 @@ module riscv_tracer (
         regs_read.push_back('{rs2, rs2_value});
         regs_read.push_back('{rs4, rs3_value});
         regs_write.push_back('{rd, 'x});
-        str = $sformatf("%-16s f%0d, f%0d, f%0d, f%0d", mnemonic, rd-32, rs1-32, rs2-32, rs4-32);
+        str = $sformatf("%-4s f%0d, f%0d, f%0d, f%0d", mnemonic, rd-32, rs1-32, rs2-32, rs4-32);
       end
     endfunction // printF3Instr
 
@@ -268,7 +262,7 @@ module riscv_tracer (
         regs_read.push_back('{rs1, rs1_value});
         regs_read.push_back('{rs2, rs2_value});
         regs_write.push_back('{rd, 'x});
-        str = $sformatf("%-16s f%0d, f%0d, f%0d", mnemonic, rd-32, rs1-32, rs2-32);
+        str = $sformatf("%-4s f%0d, f%0d, f%0d", mnemonic, rd-32, rs1-32, rs2-32);
       end
     endfunction // printF2Instr
 
@@ -277,7 +271,7 @@ module riscv_tracer (
         regs_read.push_back('{rs1, rs1_value});
         regs_read.push_back('{rs2, rs2_value});
         regs_write.push_back('{rd, 'x});
-        str = $sformatf("%-16s x%0d, f%0d, f%0d", mnemonic, rd, rs1-32, rs2-32);
+        str = $sformatf("%-4s x%0d, f%0d, f%0d", mnemonic, rd, rs1-32, rs2-32);
       end
     endfunction // printF2IInstr
 
@@ -285,7 +279,7 @@ module riscv_tracer (
       begin
         regs_read.push_back('{rs1, rs1_value});
         regs_write.push_back('{rd, 'x});
-        str = $sformatf("%-16s f%0d, f%0d", mnemonic, rd-32, rs1-32);
+        str = $sformatf("%-4s f%0d, f%0d", mnemonic, rd-32, rs1-32);
       end
     endfunction // printFInstr
 
@@ -293,7 +287,7 @@ module riscv_tracer (
       begin
         regs_read.push_back('{rs1, rs1_value});
         regs_write.push_back('{rd, 'x});
-        str = $sformatf("%-16s x%0d, f%0d", mnemonic, rd, rs1-32);
+        str = $sformatf("%-4s x%0d, f%0d", mnemonic, rd, rs1-32);
       end
     endfunction // printFIInstr
 
@@ -301,7 +295,7 @@ module riscv_tracer (
       begin
         regs_read.push_back('{rs1, rs1_value});
         regs_write.push_back('{rd, 'x});
-        str = $sformatf("%-16s f%0d, x%0d", mnemonic, rd-32, rs1);
+        str = $sformatf("%-4s f%0d, x%0d", mnemonic, rd-32, rs1);
       end
     endfunction // printIFInstr
 
@@ -309,7 +303,7 @@ module riscv_tracer (
       begin
         regs_read.push_back('{rs1, rs1_value});
         regs_write.push_back('{rd, 'x});
-        str = $sformatf("%-16s x%0d, x%0d, %0d", mnemonic, rd, rs1, $unsigned(imm_clip_type));
+        str = $sformatf("%-4s %s/x%0d, %s/x%0d, %0d", mnemonic, regAddrToStr(rd), rd, regAddrToStr(rs1), rs1, $unsigned(imm_clip_type));
       end
     endfunction // printRInstr
 
@@ -317,7 +311,7 @@ module riscv_tracer (
       begin
         regs_read.push_back('{rs1, rs1_value});
         regs_write.push_back('{rd, 'x});
-        str = $sformatf("%-16s x%0d, x%0d, %0d", mnemonic, rd, rs1, $signed(imm_i_type));
+        str = $sformatf("%-4s %s/x%0d, %s/x%0d, %0d", mnemonic, regAddrToStr(rd), rd, regAddrToStr(rs1), rs1, $signed(imm_i_type));
       end
     endfunction // printIInstr
 
@@ -325,21 +319,21 @@ module riscv_tracer (
       begin
         regs_read.push_back('{rs1, rs1_value});
         regs_write.push_back('{rd, 'x});
-        str = $sformatf("%-16s x%0d, x%0d, 0x%0x", mnemonic, rd, rs1, imm_i_type);
+        str = $sformatf("%-4s %s/x%0d, %s/x%0d, 0x%0x", mnemonic, regAddrToStr(rd), rd, regAddrToStr(rs1), rs1, imm_i_type);
       end
     endfunction // printIuInstr
 
     function void printUInstr(input string mnemonic);
       begin
         regs_write.push_back('{rd, 'x});
-        str = $sformatf("%-16s x%0d, 0x%0h", mnemonic, rd, {imm_u_type[31:12], 12'h000});
+        str = $sformatf("%-4s %s/x%0d, 0x%0h", mnemonic, regAddrToStr(rd), rd, {imm_u_type[31:12], 12'h000});
       end
     endfunction // printUInstr
 
     function void printUJInstr(input string mnemonic);
       begin
         regs_write.push_back('{rd, 'x});
-        str =  $sformatf("%-16s x%0d, %0d", mnemonic, rd, $signed(imm_uj_type));
+        str =  $sformatf("%-4s %s/x%0d, %0d", mnemonic, regAddrToStr(rd), rd, $signed(imm_uj_type));
       end
     endfunction // printUJInstr
 
@@ -347,14 +341,14 @@ module riscv_tracer (
       begin
         regs_read.push_back('{rs1, rs1_value});
         regs_read.push_back('{rs2, rs2_value});
-        str =  $sformatf("%-16s x%0d, x%0d, %0d", mnemonic, rs1, rs2, $signed(imm_sb_type));
+        str =  $sformatf("%-4s %s/x%0d, %s/x%0d, %0d", mnemonic, regAddrToStr(rs1), rs1, regAddrToStr(rs2), rs2, $signed(imm_sb_type));
       end
     endfunction // printSBInstr
 
     function void printSBallInstr(input string mnemonic);
       begin
         regs_read.push_back('{rs1, rs1_value});
-        str =  $sformatf("%-16s x%0d, %0d", mnemonic, rs1, $signed(imm_sb_type));
+        str =  $sformatf("%-4s %s/x%0d, %0d", mnemonic, regAddrToStr(rs1), rs1, $signed(imm_sb_type));
       end
     endfunction // printSBInstr
 
@@ -367,9 +361,9 @@ module riscv_tracer (
 
         if (instr[14] == 1'b0) begin
           regs_read.push_back('{rs1, rs1_value});
-          str = $sformatf("%-16s x%0d, x%0d, 0x%h", mnemonic, rd, rs1, csr);
+          str = $sformatf("%-4s %s/x%0d, %s/x%0d, 0x%h", mnemonic, regAddrToStr(rd), rd, regAddrToStr(rs1), rs1, csr);
         end else begin
-          str = $sformatf("%-16s x%0d, 0x%h, 0x%h", mnemonic, rd, imm_z_type, csr);
+          str = $sformatf("%-4s %s/x%0d, 0x%h, 0x%h", mnemonic, regAddrToStr(rd), rd, imm_z_type, csr);
         end
       end
     endfunction // printCSRInstr
@@ -378,7 +372,7 @@ module riscv_tracer (
       begin
         regs_read.push_back('{rs1, rs1_value});
         regs_write.push_back('{rd, 'x});
-        str =  $sformatf("%-16s x%0d, x%0d, %0d, %0d", mnemonic, rd, rs1, imm_s3_type, imm_s2_type);
+        str =  $sformatf("%-4s %s/x%0d, %s/x%0d, %0d, %0d", mnemonic, regAddrToStr(rd), rd, regAddrToStr(rs1), rs1, imm_s3_type, imm_s2_type);
       end
     endfunction
 
@@ -386,7 +380,7 @@ module riscv_tracer (
       begin
         regs_read.push_back('{rs1, rs1_value});
         regs_write.push_back('{rd, 'x});
-        str =  $sformatf("%-16s x%0d, x%0d, %0d, %0d", mnemonic, rd, rs1, imm_s2_type, imm_s3_type);
+        str =  $sformatf("%-4s %s/x%0d, %s/x%0d, %0d, %0d", mnemonic, regAddrToStr(rd), rd, regAddrToStr(rs1), rs1, imm_s2_type, imm_s3_type);
       end
     endfunction
 
@@ -395,7 +389,7 @@ module riscv_tracer (
         regs_read.push_back('{rd, rs3_value});
         regs_read.push_back('{rs1, rs1_value});
         regs_write.push_back('{rd, 'x});
-        str =  $sformatf("%-16s x%0d, x%0d, %0d, %0d", mnemonic, rd, rs1, imm_s3_type, imm_s2_type);
+        str =  $sformatf("%-4s %s/x%0d, %s/x%0d, %0d, %0d", mnemonic, regAddrToStr(rd), rd, regAddrToStr(rs1), rs1, imm_s3_type, imm_s2_type);
       end
     endfunction
 
@@ -428,23 +422,23 @@ module riscv_tracer (
           // regular load
           if (instr[6:0] != OPCODE_LOAD_POST) begin
             regs_read.push_back('{rs1, rs1_value});
-            str = $sformatf("%-16s x%0d, %0d(x%0d)", mnemonic, rd, $signed(imm_i_type), rs1);
+            str = $sformatf("%-4s %s/x%0d, %0d(%s)/%0d(x%0d)", mnemonic, regAddrToStr(rd), rd, $signed(imm_i_type), regAddrToStr(rs1), $signed(imm_i_type), rs1);
           end else begin
             regs_read.push_back('{rs1, rs1_value});
             regs_write.push_back('{rs1, 'x});
-            str = $sformatf("p.%-14s x%0d, %0d(x%0d!)", mnemonic, rd, $signed(imm_i_type), rs1);
+            str = $sformatf("p.%-4s %s/x%0d, %0d(%s!)/%0d(x%0d!)", mnemonic, regAddrToStr(rd), rd, $signed(imm_i_type), regAddrToStr(rs1), $signed(imm_i_type), rs1);
           end
         end else begin
           // reg-reg load
           if (instr[6:0] != OPCODE_LOAD_POST) begin
             regs_read.push_back('{rs2, rs2_value});
             regs_read.push_back('{rs1, rs1_value});
-            str = $sformatf("%-16s x%0d, x%0d(x%0d)", mnemonic, rd, rs2, rs1);
+            str = $sformatf("%-4s %s/x%0d, %s(%s)/x%0d(x%0d)", mnemonic, regAddrToStr(rd), rd, regAddrToStr(rs2), regAddrToStr(rs1), rs2, rs1);
           end else begin
             regs_read.push_back('{rs2, rs2_value});
             regs_read.push_back('{rs1, rs1_value});
             regs_write.push_back('{rs1, 'x});
-            str = $sformatf("p.%-14s x%0d, x%0d(x%0d!)", mnemonic, rd, rs2, rs1);
+            str = $sformatf("p.%-4s %s/x%0d, %s(%s!)/x%0d(x%0d!)", mnemonic, regAddrToStr(rd), rd, regAddrToStr(rs2), regAddrToStr(rs1), rs2, rs1);
           end
         end
       end
@@ -469,12 +463,12 @@ module riscv_tracer (
           if (instr[6:0] != OPCODE_STORE_POST) begin
             regs_read.push_back('{rs2, rs2_value});
             regs_read.push_back('{rs1, rs1_value});
-            str = $sformatf("%-16s x%0d, %0d(x%0d)", mnemonic, rs2, $signed(imm_s_type), rs1);
+            str = $sformatf("%-4s %s/x%0d, %0d(%s)/%0d(x%0d)", mnemonic, regAddrToStr(rs2), rs2, $signed(imm_s_type), regAddrToStr(rs1), $signed(imm_s_type), rs1);
           end else begin
             regs_read.push_back('{rs2, rs2_value});
             regs_read.push_back('{rs1, rs1_value});
             regs_write.push_back('{rs1, 'x});
-            str = $sformatf("p.%-14s x%0d, %0d(x%0d!)", mnemonic, rs2, $signed(imm_s_type), rs1);
+            str = $sformatf("p.%-4s %s/x%0d, %0d(%s)/%0d(x%0d!)", mnemonic, regAddrToStr(rs2), rs2, $signed(imm_s_type), regAddrToStr(rs1), rs1, $signed(imm_s_type));
           end
         end else begin
           // reg-reg store
@@ -482,13 +476,13 @@ module riscv_tracer (
             regs_read.push_back('{rs2, rs2_value});
             regs_read.push_back('{rs3, rs3_value});
             regs_read.push_back('{rs1, rs1_value});
-            str = $sformatf("p.%-14s x%0d, x%0d(x%0d)", mnemonic, rs2, rs3, rs1);
+            str = $sformatf("p.%-4s %s/x%0d, %s(%s)/x%0d(x%0d)", mnemonic, regAddrToStr(rs2), rs2, regAddrToStr(rs3), regAddrToStr(rs1), rs3, rs1);
           end else begin
             regs_read.push_back('{rs2, rs2_value});
             regs_read.push_back('{rs3, rs3_value});
             regs_read.push_back('{rs1, rs1_value});
             regs_write.push_back('{rs1, 'x});
-            str = $sformatf("p.%-14s x%0d, x%0d(x%0d!)", mnemonic, rs2, rs3, rs1);
+            str = $sformatf("p.%-4s %s/x%0d, %s(%s!)/x%0d(x%0d!)", mnemonic, regAddrToStr(rs2), rs2, regAddrToStr(rs3), regAddrToStr(rs1), rs3, rs1);
           end
         end
       end
@@ -515,22 +509,22 @@ module riscv_tracer (
         case (instr[14:12])
           // lp.starti and lp.endi
           3'b000,
-          3'b001: str = $sformatf("%-16s 0x%0d, 0x%0h", mnemonic, rd, imm_iz_type);
+          3'b001: str = $sformatf("%-4s %s/0x%0d, 0x%0h", mnemonic, regAddrToStr(rd), rd, imm_iz_type);
           // lp.count
           3'b010: begin
             regs_read.push_back('{rs1, rs1_value});
-            str = $sformatf("%-16s 0x%0d, x%0d", mnemonic, rd, rs1);
+            str = $sformatf("%-4s %s/0x%0d, %s/x%0d", mnemonic, regAddrToStr(rd), rd, regAddrToStr(rs1), rs1);
           end
           // lp.counti
-          3'b011: str = $sformatf("%-16s x%0d, 0x%0h", mnemonic, rd, imm_iz_type);
+          3'b011: str = $sformatf("%-4s %s/x%0d, 0x%0h", mnemonic, regAddrToStr(rd), rd, imm_iz_type);
           // lp.setup
           3'b100: begin
             regs_read.push_back('{rs1, rs1_value});
-            str = $sformatf("%-16s 0x%0d, x%0d, 0x%0h", mnemonic, rd, rs1, imm_iz_type);
+            str = $sformatf("%-4s %s/0x%0d, %s/x%0d, 0x%0h", mnemonic, regAddrToStr(rd), rd, regAddrToStr(rs1), rs1, imm_iz_type);
           end
           // lp.setupi
           3'b101: begin
-            str = $sformatf("%-16s 0x%0d, 0x%0h, 0x%0h", mnemonic, rd, imm_iz_type, rs1);
+            str = $sformatf("%-4s %s/0x%0d, 0x%0h, %s/x%0d", mnemonic, regAddrToStr(rd), rd, imm_iz_type, regAddrToStr(rs1), rs1);
           end
         endcase
       end
@@ -573,9 +567,9 @@ module riscv_tracer (
           str_asm = $sformatf("%s%s", mnemonic, str_suf);
 
         if (instr[29:25] != 5'b00000)
-          str = $sformatf("%-16s x%0d, x%0d, x%0d, %0d", str_asm, rd, rs1, rs2, $unsigned(imm_s3_type[4:0]));
+          str = $sformatf("%-4s %s/x%0d, %s/x%0d, %s/x%0d, %0d", str_asm, regAddrToStr(rd), rd, regAddrToStr(rs1), rs1, regAddrToStr(rs2), rs2, $unsigned(imm_s3_type[4:0]));
         else
-          str = $sformatf("%-16s x%0d, x%0d, x%0d", str_asm, rd, rs1, rs2);
+          str = $sformatf("%-4s %s/x%0d, %s/x%0d, %s/x%0d", str_asm, regAddrToStr(rd), rd, regAddrToStr(rs1), rs1, regAddrToStr(rs2), rs2);
       end
     endfunction
 
@@ -706,17 +700,17 @@ module riscv_tracer (
 
         if (str_sci == "") begin
           regs_read.push_back('{rs2, rs2_value});
-          str_args = $sformatf("x%0d, x%0d, x%0d", rd, rs1, rs2);
+          str_args = $sformatf("%s/x%0d, %s/x%0d, %s/x%0d", regAddrToStr(rd), rd, regAddrToStr(rs1), rs1, regAddrToStr(rs2), rs2);
         end else if (str_sci == ".sc") begin
           regs_read.push_back('{rs2, rs2_value_vec});
-          str_args = $sformatf("x%0d, x%0d, x%0d", rd, rs1, rs2);
+          str_args = $sformatf("%s/x%0d, %s/x%0d, %s/x%0d", regAddrToStr(rd), rd, regAddrToStr(rs1), rs1, regAddrToStr(rs2), rs2);
         end else if (str_sci == ".sci") begin
-          str_args = $sformatf("x%0d, x%0d, %s", rd, rs1, str_imm);
+          str_args = $sformatf("%s/x%0d, %s/x%0d, %s", regAddrToStr(rd), rd, regAddrToStr(rs1), rs1, str_imm);
         end
 
         str_asm = $sformatf("%s%s%s", mnemonic, str_sci, str_hb);
 
-        str = $sformatf("%-16s %s", str_asm, str_args);
+        str = $sformatf("%-4s %s", str_asm, str_args);
       end
     endfunction
   endclass

@@ -87,8 +87,9 @@ module riscv_prefetch_buffer
   // consumes addresses and rdata
   //////////////////////////////////////////////////////////////////////////////
 
-  riscv_fetch_fifo fifo_i
-  (
+  riscv_fetch_fifo #(
+    .RDATA_WIDTH(RDATA_WIDTH)
+  ) fifo_i  (
     .clk                   ( clk               ),
     .rst_n                 ( rst_n             ),
 

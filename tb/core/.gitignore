@@ -8,9 +8,12 @@ platform.info
 memory_dump.bin
 riscv-fesvr
 riscv-isa-sim
+fpnew
 modelsim.ini
 DVEfiles
 csrc
 inter.vpd
 ucli.key
 vc_hdrs.h
+cobj_dir
+testbench_verilator

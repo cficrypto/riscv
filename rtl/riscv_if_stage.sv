@@ -32,6 +32,9 @@ module riscv_if_stage
 #(
   parameter N_HWLP          = 2,
   parameter RDATA_WIDTH     = 32, //BACCTODO is set in riscv_core
+  parameter CFI_TAG_WIDTH   = 160,
+  parameter CFI_KEY         = 160'hefcdab9078563412000000000000000000000000, //BACCTODO is set in 
+  parameter CFI_CFG_BITS    = 4,
   parameter FPU             = 0,
   parameter DM_HaltAddress  = 32'h1A110800
 )
@@ -95,7 +98,11 @@ module riscv_if_stage
 
     // misc signals
     output logic        if_busy_o,             // is the IF stage busy fetching instructions?
-    output logic        perf_imiss_o           // Instruction Fetch Miss
+    output logic        perf_imiss_o,          // Instruction Fetch Miss
+
+    // CFI registers
+    input logic [CFI_TAG_WIDTH-1:0] CFI_tag_i,
+    input logic [CFI_CFG_BITS-1:0]  CFI_CFG_i
 );
 
   // offset FSM
@@ -111,7 +118,7 @@ module riscv_if_stage
 
   logic              fetch_valid;
   logic              fetch_ready;
-  logic       [31:0] fetch_rdata; // BACCTODO??
+  logic       [RDATA_WIDTH-1:0] fetch_rdata; // BACCTODO yes
   logic       [31:0] fetch_addr;
   logic              is_hwlp_id_q, fetch_is_hwlp;
 
@@ -150,6 +157,7 @@ module riscv_if_stage
   begin
     fetch_addr_n = '0;
 
+    // BACCTODO these special cases need patches -> interrupts probably just unencrypted
     unique case (pc_mux_i)
       PC_BOOT:      fetch_addr_n = {boot_addr_i, 1'b0};
       PC_JUMP:      fetch_addr_n = jump_target_id_i;
@@ -333,21 +341,59 @@ module riscv_if_stage
   //
   // since it does not matter where we decompress instructions, we do it here
   // to ease timing closure
-  logic [31:0] instr_decompressed;
+  logic [31:0] instr_decompressed; // BACCTODO
   logic        illegal_c_insn;
   logic        instr_compressed_int;
 
-  riscv_compressed_decoder
+  logic [RDATA_WIDTH-1:0] instr_decompressed_tmp;
+  logic CFI_busy, CFI_valid;
+
+  riscv_compressed_decoder // BACCTODO
     #(
+      .INSTR_WIDTH(RDATA_WIDTH),
       .FPU(FPU)
      )
   compressed_decoder_i
   (
+    .enable_i        ( 0         ),
     .instr_i         ( fetch_rdata          ),
-    .instr_o         ( instr_decompressed   ),
+    .instr_o         ( instr_decompressed_tmp   ),
     .is_compressed_o ( instr_compressed_int ),
     .illegal_instr_o ( illegal_c_insn       )
   );
+  // CFI
+  decrypt_wrapper
+  #(
+    .RATE(RDATA_WIDTH ),
+    .CAPACITY (CFI_TAG_WIDTH )
+  )
+  riscv_decrypt_i (
+    .clk (clk ),
+    .rst_n (rst_n ),
+    .data_in (instr_decompressed_tmp ),
+    .active (CFI_CFG_i[0] ),
+    .key (CFI_KEY ),
+    .tag (CFI_tag_i ),
+    .if_valid (if_valid ),
+    .csr (CFI_CFG_i[CFI_CFG_BITS-1:1]),
+    .busy (CFI_busy),
+    .decrypt_valid (CFI_valid), // BACCTODO not yet used
+    .data_out  (instr_decompressed)
+  );
+
+  
+
+
+  // CFI - DEBUG
+  // always @(posedge clk, negedge rst_n) begin : CFI_decrypt_dummy
+  //   if (CFI_CFG_i[0]) begin
+  //     $display("%t: DECRYPT THIS %010h (%08h)", $time, instr_decompressed, fetch_rdata);
+  //   end
+
+  //   // if (instr_compressed_int) begin
+  //   //   $display("%t: Compressed %010h (%08h)", $time, instr_decompressed, fetch_rdata);
+  //   // end
+  // end
 
   // prefetch -> IF registers
   always_ff @(posedge clk, negedge rst_n)
@@ -404,7 +450,7 @@ module riscv_if_stage
 
   assign is_hwlp_id_o = is_hwlp_id_q & instr_valid_id_o;
 
-  assign if_ready = valid & id_ready_i;
+  assign if_ready = valid & id_ready_i & ~CFI_busy; // BACCTODO decrypt ready
   assign if_valid = (~halt_if_i) & if_ready;
 
   //----------------------------------------------------------------------------

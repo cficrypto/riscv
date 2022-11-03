@@ -77,6 +77,9 @@ RTLSRC_VOPT_TB_TOP	:= $(addsuffix _vopt, $(RTLSRC_VLOG_TB_TOP))
 RISCV                    ?= ~/.riscv
 RISCV_EXE_PREFIX         = $(RISCV)/bin/riscv32-unknown-elf-
 
+RISCV_MARCH ?= -march=rv32imc
+RISCV_MABI ?= -mabi=ilp32
+
 # firmware vars
 FIRMWARE                 = firmware/
 RISCV_TEST_INCLUDES      = -Iriscv_tests/ -Iriscv_tests/macros/scalar \
@@ -212,7 +215,7 @@ tb-clean:
 # We link with our custom crt0.s and syscalls.c against newlib so that we can
 # use the c standard library
 custom/hello_world.elf: custom/hello_world.c
-	$(RISCV_EXE_PREFIX)gcc -march=rv32imc -o $@ -w -Os -g -nostdlib \
+	$(RISCV_EXE_PREFIX)gcc $(RISCV_MARCH) $(RISCV_MABI) -o $@ -w -Os -g -nostdlib \
 		-T custom/link.ld  \
 		-static \
 		custom/crt0.S \
@@ -242,22 +245,22 @@ custom-veri-run: verilate custom/hello_world.hex
 # compile and dump picorv firmware
 firmware/firmware.elf: $(FIRMWARE_OBJS) $(FIRMWARE_TEST_OBJS) $(COMPLIANCE_TEST_OBJS) \
 				firmware/link.ld
-	$(RISCV_EXE_PREFIX)gcc -g -Os -march=rv32imc -ffreestanding -nostdlib -o $@ \
+	$(RISCV_EXE_PREFIX)gcc -g -Os $(RISCV_MARCH) $(RISCV_MABI) -ffreestanding -nostdlib -o $@ \
 		$(RISCV_TEST_INCLUDES) \
 		-Wl,-Bstatic,-T,firmware/link.ld,-Map,firmware/firmware.map,--strip-debug \
 		$(FIRMWARE_OBJS) $(FIRMWARE_TEST_OBJS) $(COMPLIANCE_TEST_OBJS) -lgcc
 
 firmware/start.o: firmware/start.S
-	$(RISCV_EXE_PREFIX)gcc -c -march=rv32imc -g -o $@ $<
+	$(RISCV_EXE_PREFIX)gcc -c $(RISCV_MARCH) $(RISCV_MABI) -g -o $@ $<
 
 firmware/%.o: firmware/%.c
-	$(RISCV_EXE_PREFIX)gcc -c -march=rv32ic -g -Os --std=c99 -Wall \
+	$(RISCV_EXE_PREFIX)gcc -c -march=rv32ic -mabi=ilp32 -g -Os --std=c99 -Wall \
 		$(RISCV_TEST_INCLUDES) \
 		-ffreestanding -nostdlib -o $@ $<
 
 riscv_tests/rv32ui/%.o: riscv_tests/rv32ui/%.S riscv_tests/riscv_test.h \
 			riscv_tests/macros/scalar/test_macros.h
-	$(RISCV_EXE_PREFIX)gcc -c -march=rv32im -g -o $@ \
+	$(RISCV_EXE_PREFIX)gcc -c -march=rv32im -mabi=ilp32 -g -o $@ \
 		$(RISCV_TEST_INCLUDES) \
 		-DTEST_FUNC_NAME=$(notdir $(basename $<)) \
 		-DTEST_FUNC_TXT='"$(notdir $(basename $<))"' \
@@ -265,7 +268,7 @@ riscv_tests/rv32ui/%.o: riscv_tests/rv32ui/%.S riscv_tests/riscv_test.h \
 
 riscv_tests/rv32um/%.o: riscv_tests/rv32um/%.S riscv_tests/riscv_test.h \
 			riscv_tests/macros/scalar/test_macros.h
-	$(RISCV_EXE_PREFIX)gcc -c -march=rv32im -g -o $@ \
+	$(RISCV_EXE_PREFIX)gcc -c -march=rv32im -mabi=ilp32 -g -o $@ \
 		$(RISCV_TEST_INCLUDES) \
 		-DTEST_FUNC_NAME=$(notdir $(basename $<)) \
 		-DTEST_FUNC_TXT='"$(notdir $(basename $<))"' \
@@ -273,7 +276,7 @@ riscv_tests/rv32um/%.o: riscv_tests/rv32um/%.S riscv_tests/riscv_test.h \
 
 riscv_tests/rv32uc/%.o: riscv_tests/rv32uc/%.S riscv_tests/riscv_test.h \
 			riscv_tests/macros/scalar/test_macros.h
-	$(RISCV_EXE_PREFIX)gcc -c -march=rv32im -g -o $@ \
+	$(RISCV_EXE_PREFIX)gcc -c -march=rv32im -mabi=ilp32 -g -o $@ \
 		$(RISCV_TEST_INCLUDES) \
 		-DTEST_FUNC_NAME=$(notdir $(basename $<)) \
 		-DTEST_FUNC_TXT='"$(notdir $(basename $<))"' \
@@ -283,7 +286,7 @@ riscv_tests/rv32uc/%.o: riscv_tests/rv32uc/%.S riscv_tests/riscv_test.h \
 riscv_compliance_tests/%.o: riscv_compliance_tests/%.S riscv_compliance_tests/riscv_test.h \
 			riscv_compliance_tests/test_macros.h riscv_compliance_tests/compliance_io.h \
 			riscv_compliance_tests/compliance_test.h
-	$(RISCV_EXE_PREFIX)gcc -c -march=rv32im -g -o $@ \
+	$(RISCV_EXE_PREFIX)gcc -c -march=rv32imc -mabi=ilp32 -g -o $@ \
 		-DTEST_FUNC_NAME=$(notdir $(subst -,_,$(basename $<))) \
 		-DTEST_FUNC_TXT='"$(notdir $(subst -,_,$(basename $<)))"' \
 		-DTEST_FUNC_RET=$(notdir $(subst -,_,$(basename $<)))_ret $<
@@ -332,7 +335,7 @@ csmith/test_ref: csmith/test.c
 	gcc -m32 -o csmith/test_ref -w -Os -I $(CSMITH_INCLUDE) csmith/test.c
 
 csmith/test.elf: csmith/test.c csmith/syscalls.c csmith/start.S
-	$(RISCV_EXE_PREFIX)gcc -march=rv32imc -o csmith/test.elf -w -Os \
+	$(RISCV_EXE_PREFIX)gcc $(RISCV_MARCH) $(RISCV_MABI) -o csmith/test.elf -w -Os \
 		-I $(CSMITH_INCLUDE) \
 		-T csmith/link.ld  \
 		csmith/test.c csmith/syscalls.c csmith/start.S -Wl,--verbose
