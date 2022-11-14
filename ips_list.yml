@@ -23,3 +23,4 @@ poc_cfi_decrypt_vhdl:
   server: git@gitlab.ecs.tuwien.ac.at
   group:  riscv_cfi_crypto
   domain: [cluster, soc]
+  access_token: glpat-KU9hEvzRFJCK1fs6gA__
