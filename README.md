@@ -1,5 +1,3 @@
-[![Build Status](https://travis-ci.com/pulp-platform/riscv.svg?branch=master)](https://travis-ci.com/pulp-platform/riscv)
-
 # RI5CY: RISC-V Core
 
 RI5CY is a small 4-stage RISC-V core. It started its life as a
