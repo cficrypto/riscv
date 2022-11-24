@@ -41,7 +41,6 @@ module riscv_core
   parameter CFI_CAPACITY        =160, // BACCTODO add to soc and to cfi_config
   parameter CFI_CFG_BITS        =  4,
   parameter N_EXT_PERF_COUNTERS =  0,
-  parameter INSTR_RDATA_WIDTH   = 40, // BACCTODO 
   parameter PULP_SECURE         =  0,
   parameter N_PMP_ENTRIES       = 16,
   parameter USE_PMP             =  1, //if PULP_SECURE is 1, you can still not use the PMP
