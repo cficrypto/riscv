@@ -374,7 +374,7 @@ module riscv_if_stage
     .active (CFI_CFG_i[0] ),
     .key (CFI_KEY ),
     .tag (CFI_tag_i ),
-    .if_valid (if_valid ),
+    .if_valid (if_ready), // BACCTODO  valid & ~halt_if_i ?fetch_valid
     .csr (CFI_CFG_i[CFI_CFG_BITS-1:1]),
     .busy (CFI_busy),
     .decrypt_valid (CFI_valid), // BACCTODO not yet used
@@ -450,8 +450,8 @@ module riscv_if_stage
 
   assign is_hwlp_id_o = is_hwlp_id_q & instr_valid_id_o;
 
-  assign if_ready = valid & id_ready_i & ~CFI_busy; // BACCTODO decrypt ready
-  assign if_valid = (~halt_if_i) & if_ready;
+  assign if_ready = valid & id_ready_i;
+  assign if_valid = (~halt_if_i) & if_ready & ~CFI_busy; // BACCTODO decrypt ready
 
   //----------------------------------------------------------------------------
   // Assertions
