@@ -19,7 +19,7 @@
 #
 
 poc_cfi_decrypt_vhdl:
-  commit: 7e25d42d860c258682476976be314cf56484f845
+  commit: 16f08beaf56814522d55bf2431a39839b31a88ec
   server: git@gitlab.ecs.tuwien.ac.at
   group:  riscv_cfi_crypto
   domain: [cluster, soc]

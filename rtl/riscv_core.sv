@@ -83,11 +83,12 @@ module riscv_core
   input  logic [INSTR_RDATA_WIDTH-1:0] instr_rdata_i,
 
   // Data memory interface
+  //BACCTODO we ignore the 5th byte for data memory access
   output logic        data_req_o,
   input  logic        data_gnt_i,
   input  logic        data_rvalid_i,
   output logic        data_we_o,
-  output logic [3:0]  data_be_o,
+  output logic [3:0]  data_be_o, 
   output logic [31:0] data_addr_o,
   output logic [31:0] data_wdata_o,
   input  logic [31:0] data_rdata_i,

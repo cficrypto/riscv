@@ -77,7 +77,7 @@ RTLSRC_VOPT_TB_TOP	:= $(addsuffix _vopt, $(RTLSRC_VLOG_TB_TOP))
 RISCV                    ?= ~/.riscv
 RISCV_EXE_PREFIX         = $(RISCV)/bin/riscv32-unknown-elf-
 
-RISCV_MARCH ?= -march=rv32imc
+RISCV_MARCH ?= -march=rv32im #BACCTODO rv32imc -> why are there no pulp xtensions and floats?
 RISCV_MABI ?= -mabi=ilp32
 
 # firmware vars
