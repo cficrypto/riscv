@@ -31,9 +31,10 @@ import riscv_defines::*;
 module riscv_if_stage
 #(
   parameter N_HWLP          = 2,
-  parameter RDATA_WIDTH     = 32, //BACCTODO is set in riscv_core
+  parameter RDATA_WIDTH     = 32,
+  parameter CFI_ENABLE      = 1,
   parameter CFI_TAG_WIDTH   = 160,
-  parameter CFI_KEY         = 160'hefcdab9078563412000000000000000000000000, //BACCTODO is set in 
+  parameter CFI_KEY         = 160'hefcdab9078563412000000000000000000000000,
   parameter CFI_CFG_BITS    = 4,
   parameter FPU             = 0,
   parameter DM_HaltAddress  = 32'h1A110800
@@ -118,7 +119,7 @@ module riscv_if_stage
 
   logic              fetch_valid;
   logic              fetch_ready;
-  logic       [RDATA_WIDTH-1:0] fetch_rdata; // BACCTODO yes
+  logic       [RDATA_WIDTH-1:0] fetch_rdata;
   logic       [31:0] fetch_addr;
   logic              is_hwlp_id_q, fetch_is_hwlp;
 
@@ -172,7 +173,7 @@ module riscv_if_stage
   end
 
   generate
-    if (RDATA_WIDTH == 32 || RDATA_WIDTH == 40) begin : prefetch_32 //BACCTODO
+    if (RDATA_WIDTH == 32 || RDATA_WIDTH == 40) begin : prefetch_32
       // prefetch buffer, caches a fixed number of instructions
       riscv_prefetch_buffer #(
         .RDATA_WIDTH       ( RDATA_WIDTH                 )
@@ -341,48 +342,53 @@ module riscv_if_stage
   //
   // since it does not matter where we decompress instructions, we do it here
   // to ease timing closure
-  logic [31:0] instr_decompressed; // BACCTODO
+  logic [31:0] instr_decompressed;
   logic        illegal_c_insn;
   logic        instr_compressed_int;
 
   logic [RDATA_WIDTH-1:0] instr_decompressed_tmp;
   logic CFI_busy, CFI_valid;
 
-  riscv_compressed_decoder // BACCTODO
+  riscv_compressed_decoder
     #(
       .INSTR_WIDTH(RDATA_WIDTH),
       .FPU(FPU)
      )
   compressed_decoder_i
   (
-    .enable_i        ( 0         ),
+    .enable_i        ( 0         ), // BACCTODO well this is mean...
     .instr_i         ( fetch_rdata          ),
     .instr_o         ( instr_decompressed_tmp   ),
     .is_compressed_o ( instr_compressed_int ),
     .illegal_instr_o ( illegal_c_insn       )
   );
-  // CFI
-  decrypt_wrapper
-  #(
-    .RATE(RDATA_WIDTH ),
-    .CAPACITY (CFI_TAG_WIDTH )
-  )
-  riscv_decrypt_i (
-    .clk (clk ),
-    .rst_n (rst_n ),
-    .data_in (instr_decompressed_tmp ),
-    .active (CFI_CFG_i[0] ),
-    .key (CFI_KEY ),
-    .tag (CFI_tag_i ),
-    .if_valid (if_ready), // BACCTODO  valid & ~halt_if_i ?fetch_valid
-    .csr (CFI_CFG_i[CFI_CFG_BITS-1:1]),
-    .busy (CFI_busy),
-    .decrypt_valid (CFI_valid), // BACCTODO not yet used
-    .data_out  (instr_decompressed)
-  );
 
-  
-
+  generate // CFI
+    if (CFI_ENABLE == 0) begin : CFI_DECRYPT
+      assign instr_decompressed = instr_decompressed_tmp[31:0];
+      assign CFI_busy           = 0;
+      assign CFI_valid          = 0;
+    end else begin : CFI_DECRYPT
+      decrypt_wrapper
+      #(
+        .RATE     ( RDATA_WIDTH   ),
+        .CAPACITY ( CFI_TAG_WIDTH )
+      )
+      riscv_decrypt_i (
+        .clk           ( clk                         ),
+        .rst_n         ( rst_n                       ),
+        .data_in       ( instr_decompressed_tmp      ),
+        .active        ( CFI_CFG_i[0]                ),
+        .key           ( CFI_KEY                     ),
+        .tag           ( CFI_tag_i                   ),
+        .if_valid      ( if_ready                    ), // BACCTODO valid & ~halt_if_i ?fetch_valid
+        .csr           ( CFI_CFG_i[CFI_CFG_BITS-1:1] ),
+        .busy          ( CFI_busy                    ),
+        .decrypt_valid ( CFI_valid                   ), // BACCTODO not used
+        .data_out      ( instr_decompressed          )
+      );
+    end
+  endgenerate
 
   // CFI - DEBUG
   // always @(posedge clk, negedge rst_n) begin : CFI_decrypt_dummy

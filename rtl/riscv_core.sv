@@ -37,9 +37,11 @@ import riscv_defines::*;
 
 module riscv_core
 #(
-  parameter INSTR_RDATA_WIDTH   = 40, // BACCTODO rename
-  parameter CFI_CAPACITY        =160, // BACCTODO add to soc and to cfi_config
+  parameter INSTR_RDATA_WIDTH   = 40,
+  parameter CFI_CAPACITY        =160,
   parameter CFI_CFG_BITS        =  4,
+  parameter CFI_ENABLE          =  1,
+  parameter CFI_KEY             =160'hefcdab9078563412000000000000000000000000,
   parameter N_EXT_PERF_COUNTERS =  0,
   parameter PULP_SECURE         =  0,
   parameter N_PMP_ENTRIES       = 16,
@@ -466,6 +468,9 @@ module riscv_core
     .N_HWLP              ( N_HWLP            ),
     .RDATA_WIDTH         ( INSTR_RDATA_WIDTH ),
     .CFI_TAG_WIDTH       ( CFI_CAPACITY      ),
+    .CFI_ENABLE          ( CFI_ENABLE        ),
+    .CFI_KEY             ( CFI_KEY           ), 
+    .CFI_CFG_BITS        ( CFI_CFG_BITS      ),
     .FPU                 ( FPU               ),
     .DM_HaltAddress      ( DM_HaltAddress    )
   )
