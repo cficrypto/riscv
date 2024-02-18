@@ -53,16 +53,12 @@ parameter OPCODE_OP_FNMSUB = 7'h4b;
 parameter OPCODE_STORE_FP  = 7'h27;
 parameter OPCODE_LOAD_FP   = 7'h07;
 
-// those opcodes are now used for PULP custom instructions
-// parameter OPCODE_CUST0     = 7'h0b
-// parameter OPCODE_CUST1     = 7'h2b
-
-// PULP custom
-parameter OPCODE_LOAD_POST  = 7'h0b;
-parameter OPCODE_STORE_POST = 7'h2b;
-parameter OPCODE_PULP_OP    = 7'h5b;
-parameter OPCODE_VECOP      = 7'h57;
-parameter OPCODE_HWLOOP     = 7'h7b;
+// Those custom opcodes are used for PULP custom instructions
+parameter OPCODE_CUSTOM_0 = 7'h0b;
+parameter OPCODE_CUSTOM_1 = 7'h2b;
+parameter OPCODE_CUSTOM_2 = 7'h5b;
+parameter OPCODE_CUSTOM_3 = 7'h7b;
+parameter OPCODE_VECOP    = 7'h57;
 
 parameter REGC_S1   = 2'b10;
 parameter REGC_S4   = 2'b00;
