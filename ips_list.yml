@@ -20,7 +20,5 @@
 
 poc_cfi_decrypt_vhdl:
   commit: 16f08beaf56814522d55bf2431a39839b31a88ec
-  server: git@gitlab.ecs.tuwien.ac.at
-  group:  riscv_cfi_crypto
-  domain: [cluster, soc]
-  access_token: glpat-KU9hEvzRFJCK1fs6gA__
+  server: https://github.com
+  group:  cficrypto
