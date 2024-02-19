@@ -20,6 +20,6 @@
 
 poc_cfi_decrypt_vhdl:
   commit: a2bb3da5ea5a386fccad5bfb67cf0a2edf1f7985
-  server: https://github.com
+  server: git@github.com
   group:  cficrypto
   domain: [cluster, soc]
