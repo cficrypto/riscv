@@ -356,23 +356,23 @@ module riscv_if_stage
      )
   compressed_decoder_i
   (
-    .enable_i        ( 0         ), // BACCTODO well this is mean...
-    .instr_i         ( fetch_rdata          ),
-    .instr_o         ( instr_decompressed_tmp   ),
-    .is_compressed_o ( instr_compressed_int ),
-    .illegal_instr_o ( illegal_c_insn       )
+    .enable_i        ( '0                     ), // BACCTODO well this is mean...
+    .instr_i         ( fetch_rdata            ),
+    .instr_o         ( instr_decompressed_tmp ),
+    .is_compressed_o ( instr_compressed_int   ),
+    .illegal_instr_o ( illegal_c_insn         )
   );
 
   generate // CFI
     if (CFI_ENABLE == 0) begin : CFI_DECRYPT
       assign instr_decompressed = instr_decompressed_tmp[31:0];
       assign CFI_busy           = 0;
-      assign CFI_valid          = 0;
+      assign CFI_valid          = 1;
     end else begin : CFI_DECRYPT
       decrypt_wrapper
       #(
-        .RATE     ( RDATA_WIDTH   ),
-        .CAPACITY ( CFI_TAG_WIDTH )
+        .RATE_BITS     ( RDATA_WIDTH   ),
+        .CAPACITY_BITS ( CFI_TAG_WIDTH )
       )
       riscv_decrypt_i (
         .clk           ( clk                         ),
